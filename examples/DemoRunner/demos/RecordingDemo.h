@@ -35,7 +35,9 @@ public:
         auto d = File::getSpecialLocation (File::tempDirectory).getChildFile ("RecordingDemo");
         d.createDirectory();
         
-        auto f = Helpers::findRecentEdit (d);
+        //auto f = Helpers::findRecentEdit (d);
+        juce::File f {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/ContainerClip 2.tracktionedit"};
+        
         if (f.existsAsFile())
             createOrLoadEdit (f);
         else

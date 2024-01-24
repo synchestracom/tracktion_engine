@@ -29,11 +29,18 @@ public:
         transport.addChangeListener (this);
         updatePlayButtonText();
 
-        playPauseButton.onClick = [this] { EngineHelpers::togglePlay (edit); };
+        playPauseButton.onClick = [this] { EngineHelpers::togglePlay (*edit); };
 
         tempoSlider.setRange (30.0, 220.0, 0.1);
-        tempoSlider.setValue (edit.tempoSequence.getTempo (0)->getBpm());
-        tempoSlider.onValueChange = [this] { edit.tempoSequence.getTempo (0)->setBpm (tempoSlider.getValue()); };
+        tempoSlider.setValue (edit->tempoSequence.getTempo (0)->getBpm());
+        tempoSlider.onValueChange = [this] {
+            for (auto& tempo : edit->tempoSequence.getTempos()){
+                
+                tempo->setBpm (tempoSlider.getValue());
+            }
+            edit->tempoSequence.getTempo (0)->setBpm (tempoSlider.getValue());
+            
+        };
 
         // Load our files to temp files
         {
@@ -45,35 +52,37 @@ public:
         }
 
         // Load some example audio to start
-        if (auto track = EngineHelpers::getOrInsertAudioTrackAt (edit, 0))
-        {
-            auto& ts = edit.tempoSequence;
-            insertNewClip (*track, TrackItem::Type::container, ts.toTime ({ 0_bp, 32_bp }));
-            auto cc = getContainerClip();
-            cc->setAutoTempo (true);
-
-            auto drumClip   = insertWaveClip (*cc, {}, drumTempFile->getFile(), createClipPosition (ts, { 0_bp, 8_bp }), DeleteExistingClips::no);
-            auto synthClip  = insertWaveClip (*cc, {}, synthTempFile->getFile(), createClipPosition (ts, { 0_bp, 16_bp }), DeleteExistingClips::no);
-
-            drumClip->setUsesProxy (false);
-            drumClip->setNumberOfLoops (4);
-
-            synthClip->setUsesProxy (false);
-            synthClip->setNumberOfLoops (2);
-
-            containedClipThumbs.push_back (std::make_unique<SmartThumbnail> (engine, AudioFile (engine, drumTempFile->getFile()), *this, nullptr));
-            containedClipThumbs.push_back (std::make_unique<SmartThumbnail> (engine, AudioFile (engine, synthTempFile->getFile()), *this, nullptr));
-
-            cc->setLoopRange (cc->getPosition().time);
-            EngineHelpers::loopAroundClip (*cc);
-
-            loopInComp = std::make_unique<LoopComponent> (*cc, true);
-            loopOutComp = std::make_unique<LoopComponent> (*cc, false);
-        }
+//        if (auto track = EngineHelpers::getOrInsertAudioTrackAt (*edit, 0))
+//        {
+//            auto& ts = edit->tempoSequence;
+//            //insertNewClip (*track, TrackItem::Type::container, ts.toTime ({ 0_bp, 32_bp }));
+//            auto cc = getContainerClip();
+//            cc->setAutoTempo (true);
+//
+//            auto drumClip   = insertWaveClip (*cc, {}, drumTempFile->getFile(), createClipPosition (ts, { 0_bp, 8_bp }), DeleteExistingClips::no);
+//            auto synthClip  = insertWaveClip (*cc, {}, synthTempFile->getFile(), createClipPosition (ts, { 0_bp, 16_bp }), DeleteExistingClips::no);
+//
+//            drumClip->setUsesProxy (false);
+//            drumClip->setNumberOfLoops (4);
+//
+//            synthClip->setUsesProxy (false);
+//            synthClip->setNumberOfLoops (2);
+//
+//            containedClipThumbs.push_back (std::make_unique<SmartThumbnail> (engine, AudioFile (engine, drumTempFile->getFile()), *this, nullptr));
+//            containedClipThumbs.push_back (std::make_unique<SmartThumbnail> (engine, AudioFile (engine, synthTempFile->getFile()), *this, nullptr));
+//
+//            cc->setLoopRange (cc->getPosition().time);
+//            EngineHelpers::loopAroundClip (*cc);
+//
+//            loopInComp = std::make_unique<LoopComponent> (*cc, true);
+//            loopOutComp = std::make_unique<LoopComponent> (*cc, false);
+//        }
 
         Helpers::addAndMakeVisible (*this,
                                     { &playPauseButton, &loadFileButton, &thumbnail, &tempoSlider,
-                                      loopInComp.get(), loopOutComp.get() });
+                                      //loopInComp.get(), loopOutComp.get()
+            
+        });
 
         thumbnail.start();
 
@@ -82,7 +91,18 @@ public:
 
     ~ContainerClipDemo() override
     {
-        edit.getTempDirectory (false).deleteRecursively();
+        edit->editFileRetriever = [](){
+            
+            auto d = File::getSpecialLocation (File::userDesktopDirectory).getChildFile ("ContainerClip");
+            d.createDirectory();
+            
+            auto f = d.getChildFile("ContainerClip.tracktionedit");
+            return f;
+            
+        };
+        
+        te::EditFileOperations (*edit).save(false, true, false);
+        //edit->getTempDirectory (false).deleteRecursively();
     }
 
     //==============================================================================
@@ -98,11 +118,11 @@ public:
             g.drawText ("Edit Tempo: ", sliderR.withWidth (100).withRightX (sliderR.getX()), juce::Justification::centredRight);
         }
 
-        g.drawText ("Container clip contents and loop range:", containerClipArea.withHeight (30).withBottomY (containerClipArea.getY()), juce::Justification::centredLeft);
+        //g.drawText ("Container clip contents and loop range:", containerClipArea.withHeight (30).withBottomY (containerClipArea.getY()), juce::Justification::centredLeft);
         g.drawText ("Edit timeline and container clip loop repititions:", thumbnail.getBounds().withHeight (30).withBottomY (thumbnail.getY()), juce::Justification::centredLeft);
 
         paintContainerClipQuickAndDirty (g, thumbnail.getBounds());
-        paintContainedClipsQuickAndDirty (g, containerClipArea, getContainerClip()->getPosition().time);
+        //paintContainedClipsQuickAndDirty (g, containerClipArea, getContainerClip()->getPosition().time);
     }
 
     void resized() override
@@ -124,9 +144,9 @@ public:
 
         thumbnail.setBounds (r.removeFromBottom (100).withTrimmedTop (34));
 
-        containerClipArea = r.withTrimmedTop (30);
-        loopInComp->setBounds (containerClipArea);
-        loopOutComp->setBounds (containerClipArea);
+//        containerClipArea = r.withTrimmedTop (30);
+//        loopInComp->setBounds (containerClipArea);
+//        loopOutComp->setBounds (containerClipArea);
     }
 
 private:
@@ -216,8 +236,10 @@ private:
 
     //==============================================================================
     te::Engine& engine;
-    te::Edit edit { engine, te::createEmptyEdit (engine), te::Edit::forEditing, nullptr, 0 };
-    te::TransportControl& transport { edit.getTransport() };
+    juce::File editFile {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/ContainerClip 2.tracktionedit"};
+    std::unique_ptr<te::Edit> edit = te::loadEditFromFile (engine, editFile);
+    //te::Edit edit2 { engine, te::createEmptyEdit (engine), te::Edit::forEditing, nullptr, 0 };
+    te::TransportControl& transport { edit->getTransport() };
 
     std::unique_ptr<TemporaryFile> drumTempFile, synthTempFile;
 
@@ -225,14 +247,14 @@ private:
     Thumbnail thumbnail { transport };
     Slider tempoSlider;
 
-    std::vector<std::unique_ptr<SmartThumbnail>> containedClipThumbs;
-    std::unique_ptr<LoopComponent> loopInComp, loopOutComp;
-    juce::Rectangle<int> containerClipArea;
+    //std::vector<std::unique_ptr<SmartThumbnail>> containedClipThumbs;
+    //std::unique_ptr<LoopComponent> loopInComp, loopOutComp;
+    //juce::Rectangle<int> containerClipArea;
 
     //==============================================================================
     te::ContainerClip::Ptr getContainerClip()
     {
-        if (auto track = EngineHelpers::getOrInsertAudioTrackAt (edit, 0))
+        if (auto track = EngineHelpers::getOrInsertAudioTrackAt (*edit, 0))
             if (auto clip = dynamic_cast<te::ContainerClip*> (track->getClips()[0]))
                 return *clip;
 
@@ -267,27 +289,28 @@ private:
 
     void paintContainerClipQuickAndDirty (juce::Graphics& g, juce::Rectangle<int> r)
     {
-        const Graphics::ScopedSaveState state (g);
-        g.reduceClipRegion (r);
-
-        const auto baseColour = findColour (juce::Label::textColourId);
-
-        const auto clipTime = getContainerClip()->getPosition().time;
-        const auto loopRange = getContainerClip()->getLoopRange();
-        const int numLoops = (int) std::ceil (clipTime.getLength() / loopRange.getLength());
-        const auto pixelsPerSecond = r.getWidth() / clipTime.getLength().inSeconds();
-
-        for (int i = 0; i < numLoops; ++i)
-        {
-            const auto start = clipTime.getStart() + (loopRange.getLength() * i);
-            const auto end = start + loopRange.getLength();
-            auto clipR = r.withX (roundToInt (start.inSeconds() * pixelsPerSecond))
-                          .withRight (roundToInt (end.inSeconds() * pixelsPerSecond))
-                          .translated (r.getX(), 0);
-
-            g.setColour (baseColour.darker());
-            g.fillRect (clipR.reduced (1));
-        }
+        ignoreUnused(g, r);
+//        const Graphics::ScopedSaveState state (g);
+//        g.reduceClipRegion (r);
+//
+//        const auto baseColour = findColour (juce::Label::textColourId);
+//
+//        const auto clipTime = getContainerClip()->getPosition().time;
+//        const auto loopRange = getContainerClip()->getLoopRange();
+//        const int numLoops = (int) std::ceil (clipTime.getLength() / loopRange.getLength());
+//        const auto pixelsPerSecond = r.getWidth() / clipTime.getLength().inSeconds();
+//
+//        for (int i = 0; i < numLoops; ++i)
+//        {
+//            const auto start = clipTime.getStart() + (loopRange.getLength() * i);
+//            const auto end = start + loopRange.getLength();
+//            auto clipR = r.withX (roundToInt (start.inSeconds() * pixelsPerSecond))
+//                          .withRight (roundToInt (end.inSeconds() * pixelsPerSecond))
+//                          .translated (r.getX(), 0);
+//
+//            g.setColour (baseColour.darker());
+//            g.fillRect (clipR.reduced (1));
+//        }
     }
 
     void paintContainedClipsQuickAndDirty (juce::Graphics& g, juce::Rectangle<int> r, te::TimeRange displayRange)
@@ -301,28 +324,28 @@ private:
         const int numClips = getContainerClip()->getClips().size();
         const int clipH = r.getHeight() / numClips;
         const auto pixelsPerSecond = r.getWidth() / displayRange.getLength().inSeconds();
-
+        ignoreUnused(clipH, pixelsPerSecond);
         auto drawClip = [&] (int index)
         {
             if (auto clip = getChildClip (index))
             {
-                const auto& thumb = containedClipThumbs[(size_t) index];
-                const auto clipArea = r.removeFromTop (clipH);
-                const auto clipLoopRange = clip->getLoopRange();
-                const auto clipLoopLength = clipLoopRange.getLength();
-                const auto clipFileRange = te::TimeRange (0_tp, te::TimePosition::fromSeconds (thumb->getTotalLength()));
-
-                for (auto start = displayRange.getStart(); start < displayRange.getEnd(); start = start + clipLoopLength)
-                {
-                    const auto drawArea = clipArea.withX (roundToInt (start.inSeconds() * pixelsPerSecond))
-                                                  .withRight (roundToInt ((start + clipLoopLength).inSeconds() * pixelsPerSecond))
-                                                  .translated (clipArea.getX(), 0);
-                    g.setColour (baseColour.darker());
-                    thumb->drawChannels (g, drawArea, clipFileRange, 1.0f);
-
-                    g.setColour (baseColour.contrasting (0.2f));
-                    g.drawRect (drawArea);
-                }
+//                const auto& thumb = containedClipThumbs[(size_t) index];
+//                const auto clipArea = r.removeFromTop (clipH);
+//                const auto clipLoopRange = clip->getLoopRange();
+//                const auto clipLoopLength = clipLoopRange.getLength();
+//                const auto clipFileRange = te::TimeRange (0_tp, te::TimePosition::fromSeconds (thumb->getTotalLength()));
+//
+//                for (auto start = displayRange.getStart(); start < displayRange.getEnd(); start = start + clipLoopLength)
+//                {
+//                    const auto drawArea = clipArea.withX (roundToInt (start.inSeconds() * pixelsPerSecond))
+//                                                  .withRight (roundToInt ((start + clipLoopLength).inSeconds() * pixelsPerSecond))
+//                                                  .translated (clipArea.getX(), 0);
+//                    g.setColour (baseColour.darker());
+//                    thumb->drawChannels (g, drawArea, clipFileRange, 1.0f);
+//
+//                    g.setColour (baseColour.contrasting (0.2f));
+//                    g.drawRect (drawArea);
+//                }
             }
         };
 

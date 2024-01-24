@@ -35,7 +35,8 @@ public:
         auto d = File::getSpecialLocation (File::tempDirectory).getChildFile ("PluginDemo");
         d.createDirectory();
 
-        auto f = Helpers::findRecentEdit (d);
+        //auto f = Helpers::findRecentEdit (d);
+        auto f = juce::File("/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Midi Guitar 1.tracktionedit");
         if (f.existsAsFile())
             createOrLoadEdit (f);
         else
