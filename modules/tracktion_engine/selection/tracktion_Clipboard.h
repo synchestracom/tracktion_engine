@@ -257,6 +257,11 @@ public:
     void addListener (juce::ChangeListener*);
     void removeListener (juce::ChangeListener*);
 
+    
+    static TimePosition pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFile,
+                                               int& targetTrackIndex,
+                                               TimePosition startTime, bool importTempoChanges);
+    
 private:
     std::unique_ptr<ContentType> content;
     juce::ChangeBroadcaster broadcaster;

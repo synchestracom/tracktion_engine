@@ -23,23 +23,35 @@ public:
         : engine (e)
     {
         newEditButton.onClick = [this] { createOrLoadEdit(); };
+        importMidiButton.onClick = [this] {
+            FileChooser fc ("Import Midi", File::getSpecialLocation (File::userDocumentsDirectory), "*.mid");
+            if (fc.browseForFileToOpen())
+            {
+                int targetTrackIndex = 0;
+                tracktion::Clipboard::pasteMIDIFileIntoEdit(*edit, fc.getResult(), targetTrackIndex, tracktion::TimePosition::fromSeconds(0), true);
+                te::EditFileOperations (*edit).save (true, true, false);
+            }
+            else
+                return;
+        };
+        
+        reloadButton.onClick = [this] {
+            createOrLoadEdit (editFile);
+        };
         
         updatePlayButtonText();
         updateRecordButtonText();
         editNameLabel.setJustificationType (Justification::centred);
         Helpers::addAndMakeVisible (*this, { &newEditButton, &playPauseButton, &recordButton, &showEditButton,
-                                             &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel, &showWaveformButton, &undoButton, &redoButton });
+                                             &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel, &showWaveformButton, &undoButton, &redoButton, &importMidiButton, &reloadButton });
 
         deleteButton.setEnabled (false);
         
         auto d = File::getSpecialLocation (File::tempDirectory).getChildFile ("RecordingDemo");
         d.createDirectory();
         
-        //auto f = Helpers::findRecentEdit (d);
-        juce::File f {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/ContainerClip 2.tracktionedit"};
-        
-        if (f.existsAsFile())
-            createOrLoadEdit (f);
+        if (editFile.existsAsFile())
+            createOrLoadEdit (editFile);
         else
             createOrLoadEdit (d.getNonexistentChildFile ("Test", ".tracktionedit", false));
         
@@ -65,17 +77,19 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        int w = r.getWidth() / 9;
+        int w = r.getWidth() / 5;
         auto topR = r.removeFromTop (30);
-        newEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        //newEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
         playPauseButton.setBounds (topR.removeFromLeft (w).reduced (2));
         recordButton.setBounds (topR.removeFromLeft (w).reduced (2));
         showEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        newTrackButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        clearTracksButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        deleteButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        undoButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        //newTrackButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        //clearTracksButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        //deleteButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        //undoButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        //redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        importMidiButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        reloadButton.setBounds(topR.removeFromLeft(w).reduced(2));
 
         topR = r.removeFromTop (30);
         showWaveformButton.setBounds (topR.removeFromLeft (w * 2).reduced (2));
@@ -91,10 +105,11 @@ private:
     te::SelectionManager selectionManager { engine };
     std::unique_ptr<te::Edit> edit;
     std::unique_ptr<EditComponent> editComponent;
+    juce::File editFile {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Ravel - Bolero - import midi tempo.tracktionedit"};
 
     TextButton newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
                showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
-               undoButton {"Undo"}, redoButton {"Redo"};
+               undoButton {"Undo"}, redoButton {"Redo"}, importMidiButton {"Import Midi"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"};
     Label editNameLabel { "No Edit Loaded" };
     ToggleButton showWaveformButton { "Show Waveforms" };
 
@@ -166,8 +181,9 @@ private:
             recordButton.setButtonText (edit->getTransport().isRecording() ? "Abort" : "Record");
     }
 
-    void createOrLoadEdit (File editFile = {})
+    void createOrLoadEdit (File newEditFile = {})
     {
+        editFile = newEditFile;
         if (editFile == File())
         {
             FileChooser fc ("New Edit", File::getSpecialLocation (File::userDocumentsDirectory), "*.tracktionedit");
@@ -180,7 +196,31 @@ private:
         selectionManager.deselectAll();
         editComponent = nullptr;
         
-        if (editFile.existsAsFile())
+        auto projectFiles = editFile.getParentDirectory().findChildFiles(juce::File::findFiles, false, "*.tracktion");
+        auto projectFile = projectFiles.data();
+        auto xml = juce::parseXML (editFile);
+        auto projectID_str = xml.get() ? xml->getStringAttribute("projectID") : "";
+        if (projectFile && projectID_str != "")
+        {
+            // load edit using "tracktionedit" AND "tracktion" file
+            engine.getProjectManager().addProjectToList(*projectFile, true, engine.getProjectManager().getActiveProjectsFolder());
+            auto projectID = ProjectItemID{projectID_str};
+            auto editState = te::loadEditFromProjectManager(engine.getProjectManager(), projectID);
+            Edit::Options options =
+            {
+                engine,
+                editState,
+                projectID,
+                Edit::forEditing,
+                nullptr,
+                Edit::getDefaultNumUndoLevels(),
+                [this] { return editFile; },
+                {}
+            };
+            edit = std::make_unique<Edit> (options);
+        }
+        else if (editFile.existsAsFile())
+            // load edit using "tracktionedit" file only
             edit = te::loadEditFromFile (engine, editFile);
         else
             edit = te::createEmptyEdit (engine, editFile);
@@ -191,7 +231,7 @@ private:
         transport.addChangeListener (this);
         
         editNameLabel.setText (editFile.getFileNameWithoutExtension(), dontSendNotification);
-        showEditButton.onClick = [this, editFile]
+        showEditButton.onClick = [this]
         {
             te::EditFileOperations (*edit).save (true, true, false);
             editFile.revealToUser();
@@ -199,7 +239,7 @@ private:
         
         createTracksAndAssignInputs();
         
-        te::EditFileOperations (*edit).save (true, true, false);
+        //te::EditFileOperations (*edit).save (true, true, false);
         
         editComponent = std::make_unique<EditComponent> (*edit, selectionManager);
         addAndMakeVisible (*editComponent);

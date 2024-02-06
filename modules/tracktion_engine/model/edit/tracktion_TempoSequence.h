@@ -125,7 +125,7 @@ public:
 
     //==============================================================================
     /** Inserts a tempo break that can be edited later. */
-    TempoSetting::Ptr insertTempo (TimePosition);
+    TempoSetting::Ptr insertTempo (TimePosition, bool snapToBeat = true);
 
     /** Inserts a tempo with a bpm and curve value. @see TempoSetting. */
     TempoSetting::Ptr insertTempo (BeatPosition, double bpm, float curve);
@@ -237,7 +237,7 @@ private:
     void handleAsyncUpdate() override;
 
     TempoSetting::Ptr insertTempo (BeatPosition, double bpm, float curve, juce::UndoManager*);
-    TempoSetting::Ptr insertTempo (TimePosition, juce::UndoManager*);
+    TempoSetting::Ptr insertTempo (TimePosition, juce::UndoManager*, bool snapToBeat = true);
     TimeSigSetting::Ptr insertTimeSig (TimePosition, juce::UndoManager*);
     HashCode createHashForTemposInRange (TimeRange) const;
 

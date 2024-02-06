@@ -1657,7 +1657,8 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
         }
 
         tempoChangeBeatNumbers.add (BeatPosition::fromBeats (tickLen * msg.getTimeStamp()));
-        bpms.add (4.0 * 60.0 / (denom * secsPerQuarterNote));
+        auto bpm = 60.0 / secsPerQuarterNote;
+        bpms.add (bpm);
         numerators.add (numer);
         denominators.add (denom);
     }

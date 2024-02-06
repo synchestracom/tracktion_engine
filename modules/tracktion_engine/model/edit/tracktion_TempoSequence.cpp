@@ -184,9 +184,9 @@ const juce::Array<TempoSetting*>& TempoSequence::getTempos() const  { return tem
 int TempoSequence::getNumTempos() const                             { return tempos->objects.size(); }
 TempoSetting* TempoSequence::getTempo (int index) const             { return tempos->objects[index]; }
 
-TempoSetting::Ptr TempoSequence::insertTempo (TimePosition time)
+TempoSetting::Ptr TempoSequence::insertTempo (TimePosition time, bool snapToBeat)
 {
-    return insertTempo (time, getUndoManager());
+    return insertTempo (time, getUndoManager(), snapToBeat);
 }
 
 TempoSetting::Ptr TempoSequence::insertTempo (BeatPosition beatNum, double bpm, float curve)
@@ -194,13 +194,13 @@ TempoSetting::Ptr TempoSequence::insertTempo (BeatPosition beatNum, double bpm, 
     return insertTempo (beatNum, bpm, curve, getUndoManager());
 }
 
-TempoSetting::Ptr TempoSequence::insertTempo (TimePosition time, juce::UndoManager* um)
+TempoSetting::Ptr TempoSequence::insertTempo (TimePosition time, juce::UndoManager* um, bool snapToBeat)
 {
     auto bpm = getBpmAt (time);
     float defaultCurve = 1.0f;
 
     if (getNumTempos() > 0)
-        return insertTempo (tracktion::roundToNearestBeat (toBeats (time)), bpm, defaultCurve, um);
+        return insertTempo (snapToBeat ? tracktion::roundToNearestBeat (toBeats (time)) : toBeats (time) , bpm, defaultCurve, um);
 
     return insertTempo ({}, bpm, defaultCurve, um);
 }

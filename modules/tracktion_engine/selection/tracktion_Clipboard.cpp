@@ -96,7 +96,7 @@ static AudioTrack* getOrInsertAudioTrackNearestIndex (Edit& edit, int trackIndex
     return edit.insertNewAudioTrack (TrackInsertPoint (nullptr, getAllTracks (edit).getLast()), nullptr).get();
 }
 
-static TimePosition pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFile,
+TimePosition Clipboard::pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFile,
                                            int& targetTrackIndex,
                                            TimePosition startTime, bool importTempoChanges)
 {
@@ -138,13 +138,14 @@ static TimePosition pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFil
                 tempoSequence.removeTemposBetween (TimeRange (startTime, tempoSequence.toTime (endBeat))
                                                      .expanded (TimeDuration::fromSeconds (0.001)), true);
 
+            const bool snapToBeat = false;
             for (int i = 0; i < tempoChangeBeatNumbers.size(); ++i)
             {
                 auto insertTime = tempoSequence.toTime (startBeat + toDuration (tempoChangeBeatNumbers.getUnchecked (i)));
                 auto& origTempo = tempoSequence.getTempoAt (insertTime);
 
                 if (std::abs (origTempo.getBpm() - bpms.getUnchecked (i)) > 0.001)
-                    if (auto tempo = tempoSequence.insertTempo (insertTime))
+                    if (auto tempo = tempoSequence.insertTempo (insertTime, snapToBeat))
                         tempo->setBpm (bpms.getUnchecked (i));
 
                 auto& origTimeSig = tempoSequence.getTimeSigAt (insertTime);
