@@ -373,11 +373,14 @@ private:
 #define Component CarbonDummyCompName
 
 }} // namespace tracktion { inline namespace engine
+
 #if TRACKTION_BUILD_RUBBERBAND
  #if __has_include(<rubberband/single/RubberBandSingle.cpp>)
   #include <rubberband/single/RubberBandSingle.cpp>
  #elif __has_include("../3rd_party/rubberband/single/RubberBandSingle.cpp")
   #include "../3rd_party/rubberband/single/RubberBandSingle.cpp"
+ #elif __has_include("3rd_party/rubberband/single/RubberBandSingle.cpp")
+  #include "3rd_party/rubberband/single/RubberBandSingle.cpp"
  #else
   #error "TRACKTION_BUILD_RUBBERBAND enabled but not found in the search path!"
  #endif

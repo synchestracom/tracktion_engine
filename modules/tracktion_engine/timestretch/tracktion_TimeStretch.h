@@ -49,7 +49,8 @@ public:
        #if TRACKTION_ENABLE_TIMESTRETCH_ELASTIQUE
         defaultMode = elastiquePro      /**< Default mode. */
        #elif TRACKTION_ENABLE_TIMESTRETCH_RUBBERBAND
-        defaultMode = rubberbandMelodic /**< Default mode. */
+        //defaultMode = rubberbandMelodic /**< Default mode. */ //TODO put back
+        defaultMode = soundtouchBetter /**< Default mode. */
        #elif TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH
         defaultMode = soundtouchBetter  /**< Default mode. */
        #else
