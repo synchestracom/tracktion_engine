@@ -30,7 +30,8 @@ public:
     ~ImpulseResponsePlugin() override;
 
     static const char* getPluginName();
-    static inline const char* xmlTypeName = "impulseResponse";
+  //static inline const char* xmlTypeName = "impulseResponse";  // Waveform saves this as "guitarIR" plugin
+    static inline const char* xmlTypeName = "guitarIR";
 
     //==============================================================================
     /** Loads an impulse from binary audio file data i.e. not a block of raw floats.
