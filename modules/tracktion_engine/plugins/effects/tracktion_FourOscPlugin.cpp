@@ -1519,6 +1519,21 @@ void FourOscPlugin::applyToBuffer (juce::AudioBuffer<float>& buffer, juce::MidiB
 
     for (auto& itr : smoothers)
         itr.second.process (buffer.getNumSamples());
+    
+    
+    // change tempo
+    // TODO put in a seperate TempoFollowerPlugin
+    for (const auto& midiMessage : midi)
+        if (const auto& message = midiMessage.getMessage(); message.isNoteOn())
+        {
+            jassert (!juce::MessageManager::getInstance()->currentThreadHasLockedMessageManager());
+            int newTempo = message.getNoteNumber();
+            juce::MessageManager::callAsync ([this, newTempo]() {
+                for (auto& tempo : edit.tempoSequence.getTempos()){
+                    tempo->setBpm (newTempo); // TODO not on all tempos, only on current one ?
+                }
+            });
+        }
 }
 
 void FourOscPlugin::applyEffects (juce::AudioBuffer<float>& buffer)
