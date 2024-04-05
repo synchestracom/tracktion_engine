@@ -44,8 +44,8 @@ ReverbPlugin::ReverbPlugin (PluginCreationInfo info) : Plugin (info)
 
     auto um = getUndoManager();
 
-    roomSizeValue.referTo (state, IDs::roomSize, um, 0.3f);
-    dampValue.referTo (state, IDs::damp, um, 0.5f);
+    roomSizeValue.referTo (state, IDs::size, um, 0.3f);
+    dampValue.referTo (state, IDs::lowDamp, um, 0.5f);
     wetValue.referTo (state, IDs::wet, um, 1.0f / scalewet);
     dryValue.referTo (state, IDs::dry, um, 0.5f);
     widthValue.referTo (state, IDs::width, um, 1.0f);
@@ -71,7 +71,7 @@ ReverbPlugin::~ReverbPlugin()
     modeParam->detachFromCurrentValue();
 }
 
-const char* ReverbPlugin::xmlTypeName = "reverb";
+const char* ReverbPlugin::xmlTypeName = "naturalReverb";
 
 void ReverbPlugin::initialise (const PluginInitialisationInfo& info)
 {

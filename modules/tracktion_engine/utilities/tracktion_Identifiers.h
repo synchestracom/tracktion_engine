@@ -175,6 +175,7 @@ namespace IDs
     DECLARE_ID (wet)
     DECLARE_ID (roomSize)
     DECLARE_ID (damp)
+    DECLARE_ID (lowDamp)
     DECLARE_ID (leftTo)
     DECLARE_ID (leftInDb)
     DECLARE_ID (rightTo)
