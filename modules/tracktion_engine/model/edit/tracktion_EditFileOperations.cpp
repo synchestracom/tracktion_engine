@@ -307,7 +307,7 @@ bool EditFileOperations::saveAs()
 bool EditFileOperations::saveAs (const juce::File& f, bool forceOverwriteExisting)
 {
     if (f == getEditFile())
-        return save (true, false, false);
+        return save (true, forceOverwriteExisting, false);
 
     if (f.existsAsFile() && ! forceOverwriteExisting)
     {
