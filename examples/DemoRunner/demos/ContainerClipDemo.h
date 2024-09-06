@@ -41,6 +41,26 @@ public:
             edit->tempoSequence.getTempo (0)->setBpm (tempoSlider.getValue());
             
         };
+        instrmentLevelSlider.setRange (-60.0, 6.0, 0.1);
+        instrmentLevelSlider.onValueChange = [this] {
+            for (auto& ct : getClipTracks(*edit))
+                for (auto& c : ct->getClips())
+                    if (auto containerClip = dynamic_cast<te::ContainerClip*> (c))
+                    {
+                        for (auto& subclip : containerClip->getClips())
+                            if (auto audioClip = dynamic_cast<te::AudioClipBase*> (subclip))
+                            {
+                                audioClip->setGainDB(instrmentLevelSlider.getValue());
+                                return;
+                            }
+                    }
+                    else if (auto audioClip = dynamic_cast<te::AudioClipBase*> (c))
+                    {
+                        audioClip->setGainDB(instrmentLevelSlider.getValue());
+                        return;
+                    }
+            
+        };
 
         // Load our files to temp files
         {
@@ -71,7 +91,7 @@ public:
 //            containedClipThumbs.push_back (std::make_unique<SmartThumbnail> (engine, AudioFile (engine, drumTempFile->getFile()), *this, nullptr));
 //            containedClipThumbs.push_back (std::make_unique<SmartThumbnail> (engine, AudioFile (engine, synthTempFile->getFile()), *this, nullptr));
 //
-//            cc->setLoopRange (cc->getPosition().time);
+//            cc->setLoopRange ils doivent être, je pense que   (cc->getPosition().time);
 //            EngineHelpers::loopAroundClip (*cc);
 //
 //            loopInComp = std::make_unique<LoopComponent> (*cc, true);
@@ -79,10 +99,12 @@ public:
 //        }
 
         Helpers::addAndMakeVisible (*this,
-                                    { &playPauseButton, &loadFileButton, &thumbnail, &tempoSlider,
+                                    { &playPauseButton, &loadFileButton, &thumbnail, &tempoSlider, &instrmentLevelSlider
                                       //loopInComp.get(), loopOutComp.get()
             
         });
+        
+        edit->
 
         thumbnail.start();
 
@@ -135,9 +157,10 @@ public:
             loadFileButton.setBounds (topR.reduced (2));
         }
 
-        {
-            auto left = r.removeFromBottom (30).removeFromLeft (r.getWidth() / 2);
+        {   auto bottom = r.removeFromBottom (30);
+            auto left = bottom.removeFromLeft (r.getWidth() / 2);
             tempoSlider.setBounds (left.withTrimmedLeft (100).reduced (2));
+            instrmentLevelSlider.setBounds(bottom);
         }
 
         r = r.reduced (2);
@@ -246,6 +269,7 @@ private:
     TextButton playPauseButton { "Play" }, loadFileButton { "Load file" };
     Thumbnail thumbnail { transport };
     Slider tempoSlider;
+    Slider instrmentLevelSlider;
 
     //std::vector<std::unique_ptr<SmartThumbnail>> containedClipThumbs;
     //std::unique_ptr<LoopComponent> loopInComp, loopOutComp;

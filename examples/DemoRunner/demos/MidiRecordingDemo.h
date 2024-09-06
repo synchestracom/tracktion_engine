@@ -35,8 +35,7 @@ public:
 
         deleteButton.setEnabled (false);
         
-        auto d = File::getSpecialLocation (File::tempDirectory).getChildFile ("MidiRecordingDemo");
-        d.createDirectory();
+        auto d = File("/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Edits/other/default demo/");
         
         auto f = Helpers::findRecentEdit (d);
         if (f.existsAsFile())

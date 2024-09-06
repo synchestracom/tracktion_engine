@@ -88,6 +88,21 @@ public:
         setSize (600, 400);
     }
 
+    ~IRPluginDemo() override
+    {
+        edit.editFileRetriever = [](){
+            
+            auto d = File::getSpecialLocation (File::userDesktopDirectory).getChildFile ("IRPlugin");
+            d.createDirectory();
+            
+            auto f = d.getChildFile("IRPlugin.tracktionedit");
+            return f;
+            
+        };
+        
+        te::EditFileOperations (edit).save(false, true, false);
+        //edit->getTempDirectory (false).deleteRecursively();
+    }
     //==============================================================================
     void paint (Graphics& g) override
     {

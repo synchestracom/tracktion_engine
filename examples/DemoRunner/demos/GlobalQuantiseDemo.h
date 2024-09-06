@@ -201,7 +201,9 @@ private:
             for (auto modeName : tracktion_engine::TimeStretcher::getPossibleModes (engine, true))
             {
                 const auto mode = tracktion_engine::TimeStretcher::getModeFromName (engine, modeName);
-                m.addItem (PopupMenu::Item (modeName).setTicked (currentMode == mode).setAction ([clip, mode] { clip->setTimeStretchMode (mode); }));
+                m.addItem (PopupMenu::Item (modeName).setTicked (currentMode == mode).setAction ([clip, mode] {
+                    clip->setTimeStretchMode (mode);
+                }));
             }
         }
         else

@@ -43,7 +43,11 @@ public:
         updateRecordButtonText();
         editNameLabel.setJustificationType (Justification::centred);
         Helpers::addAndMakeVisible (*this, { &newEditButton, &playPauseButton, &recordButton, &showEditButton,
-                                             &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel, &showWaveformButton, &undoButton, &redoButton, &importMidiButton, &reloadButton });
+                                             &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel,
+                                             &showWaveformButton, &undoButton, &redoButton, &importMidiButton,
+                                             &reloadButton, &importAudio100Button, &generateMixesButton,
+                                             &importAudio70Button, &importAudio50Button
+        });
 
         deleteButton.setEnabled (false);
         
@@ -77,19 +81,23 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        int w = r.getWidth() / 5;
+        int w = r.getWidth() / 8;
         auto topR = r.removeFromTop (30);
         //newEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
         playPauseButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        recordButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        //recordButton.setBounds (topR.removeFromLeft (w).reduced (2));
         showEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //newTrackButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //clearTracksButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //deleteButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //undoButton.setBounds(topR.removeFromLeft(w).reduced(2));
         //redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        importMidiButton.setBounds(topR.removeFromLeft(w).reduced(2));
         reloadButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        importMidiButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        importAudio100Button.setBounds(topR.removeFromLeft(w).reduced(2));
+        importAudio70Button.setBounds(topR.removeFromLeft(w).reduced(2));
+        importAudio50Button.setBounds(topR.removeFromLeft(w).reduced(2));
+        generateMixesButton.setBounds(topR.removeFromLeft(w).reduced(2));
 
         topR = r.removeFromTop (30);
         showWaveformButton.setBounds (topR.removeFromLeft (w * 2).reduced (2));
@@ -105,11 +113,13 @@ private:
     te::SelectionManager selectionManager { engine };
     std::unique_ptr<te::Edit> edit;
     std::unique_ptr<EditComponent> editComponent;
-    juce::File editFile {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Ravel - Bolero - import midi tempo.tracktionedit"};
+    juce::File editFile {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Import Tempo changes.tracktionedit"};
 
     TextButton newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
                showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
-               undoButton {"Undo"}, redoButton {"Redo"}, importMidiButton {"Import Midi"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"};
+               undoButton {"Undo"}, redoButton {"Redo"}, importMidiButton {"Import Midi"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
+               importAudio100Button {"Import Audio 100%"}, importAudio70Button {"Import Audio 70%"}, importAudio50Button {"Import Audio 50%"},
+               generateMixesButton {"Generate Mixes"};
     Label editNameLabel { "No Edit Loaded" };
     ToggleButton showWaveformButton { "Show Waveforms" };
 
