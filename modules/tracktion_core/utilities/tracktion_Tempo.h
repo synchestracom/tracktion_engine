@@ -41,6 +41,9 @@ namespace tempo
 
         /** Returns the number of fractional beats. */
         BeatDuration getFractionalBeats() const;
+        
+        /** Returns a String representation. Ex: 1.1.00 */
+        juce::String toString() const;
     };
 
     /** Holds a time signature. */
@@ -349,6 +352,8 @@ namespace tempo
 inline double BarsAndBeats::getTotalBars() const                { return bars + (beats.inBeats() / numerator); }
 inline int BarsAndBeats::getWholeBeats() const                  { return (int) std::floor (beats.inBeats()); }
 inline BeatDuration BarsAndBeats::getFractionalBeats() const    { return BeatDuration::fromBeats (beats.inBeats() - std::floor (beats.inBeats())); }
+inline juce::String BarsAndBeats::toString() const            { return juce::String(bars + 1) + "." + juce::String(getWholeBeats() + 1.0 + getFractionalBeats().inBeats(), 2); }
+
 
 //==============================================================================
 //==============================================================================
