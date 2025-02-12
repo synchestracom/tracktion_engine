@@ -66,10 +66,10 @@ public:
     juce::CachedValue<juce::String> typeName;
     juce::CachedValue<float> proportion;
     juce::CachedValue<bool> quantiseNoteOffs;
-
+    double fractionOfBeat = 0;
+    
 private:
     int typeIndex = 0;
-    double fractionOfBeat = 0;
 
     void initialiseCachedValues (juce::UndoManager*);
 
