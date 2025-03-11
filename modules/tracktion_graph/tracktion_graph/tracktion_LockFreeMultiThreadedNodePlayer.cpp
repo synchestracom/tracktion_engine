@@ -96,6 +96,7 @@ int LockFreeMultiThreadedNodePlayer::process (const Node::ProcessContext& pc)
 
     // Reset the stream range
     numSamplesToProcess = pc.numSamples;
+    jassert (numSamplesToProcess > 0); // TODO MBA maybe don insert multiple changes at same time ?
     referenceSampleRange = pc.referenceSampleRange;
 
     // Prepare all the nodes to be played back
