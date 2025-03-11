@@ -352,7 +352,13 @@ namespace tempo
 inline double BarsAndBeats::getTotalBars() const                { return bars + (beats.inBeats() / numerator); }
 inline int BarsAndBeats::getWholeBeats() const                  { return (int) std::floor (beats.inBeats()); }
 inline BeatDuration BarsAndBeats::getFractionalBeats() const    { return BeatDuration::fromBeats (beats.inBeats() - std::floor (beats.inBeats())); }
-inline juce::String BarsAndBeats::toString() const            { return juce::String(bars + 1) + "." + juce::String(getWholeBeats() + 1.0 + getFractionalBeats().inBeats(), 2); }
+
+inline juce::String BarsAndBeats::toString() const {
+    if (beats.inBeats() <= numerator - 0.01)
+        return juce::String(bars + 1) + "." + juce::String(beats.inBeats() + 1.0, 2);
+    else
+        return juce::String(bars + 2) + "." + juce::String(1.0, 2); // fix rounding errors.
+}
 
 
 //==============================================================================
