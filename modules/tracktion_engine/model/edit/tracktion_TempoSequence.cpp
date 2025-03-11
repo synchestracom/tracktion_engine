@@ -200,7 +200,9 @@ TempoSetting::Ptr TempoSequence::insertTempo (TimePosition time, juce::UndoManag
     float defaultCurve = 1.0f;
 
     if (getNumTempos() > 0)
-        return insertTempo (tracktion::roundToNearestBeat (toBeats (time)), bpm, defaultCurve, um);
+      //Don't snap tempo changes
+      //return insertTempo (tracktion::roundToNearestBeat (toBeats (time)), bpm, defaultCurve, um);
+        return insertTempo (                               toBeats (time) , bpm, defaultCurve, um);
 
     return insertTempo ({}, bpm, defaultCurve, um);
 }
