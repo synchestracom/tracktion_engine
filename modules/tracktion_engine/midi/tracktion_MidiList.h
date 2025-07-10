@@ -168,7 +168,8 @@ public:
                                             juce::Array<int>& numerators,
                                             juce::Array<int>& denominators,
                                             BeatDuration& songLength,
-                                            bool importAsNoteExpression);
+                                            bool importAsNoteExpression,
+                                            bool importNotes = true);
 
     //==============================================================================
     template <typename Type>

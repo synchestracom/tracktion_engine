@@ -23,13 +23,130 @@ public:
         : engine (e)
     {
         newEditButton.onClick = [this] { createOrLoadEdit(); };
-        importMidiButton.onClick = [this] {
+    
+        importBPMsButton.onClick = [this] {
             FileChooser fc ("Import Midi", File::getSpecialLocation (File::userDocumentsDirectory), "*.mid");
             if (fc.browseForFileToOpen())
             {
-                int targetTrackIndex = 0;
-                tracktion::Clipboard::pasteMIDIFileIntoEdit(*edit, fc.getResult(), targetTrackIndex, tracktion::TimePosition::fromSeconds(0), true);
-                te::EditFileOperations (*edit).save (true, true, false);
+                // find Movements track
+                Track* movementsTrack = nullptr;
+                for (auto track : tracktion::getClipTracks(*edit))
+                    if (track->getName() == "MIDI Tempo Time Sign.")
+                        movementsTrack = track;
+                
+                if (movementsTrack == nullptr)
+                {
+                    SY_ERR("Could not find movements track");
+                    return;
+                }
+                
+                int movementsTrack_index = movementsTrack->getIndexInEditTrackList();
+                jassert(fc.getResult().getFileName().startsWith("Mvt")); // log error and return if not
+                tracktion::Clipboard::pasteMIDIFileIntoEdit(*edit, fc.getResult(), movementsTrack_index, edit->getTransport().getPosition(), true, false);
+            }
+            else
+                return;
+        };
+        
+        importFLACsButton.onClick = [this] {
+            FileChooser fc ("Import FLACs", editFile, "*.flac");
+            if (fc.browseForMultipleFilesToOpen())
+            {
+                // sort files by name, so they're imported in the correct musical order
+                auto results = fc.getResults();
+                auto comparator = juce::File::NaturalFileComparator(true);
+                results.sort(comparator);
+                
+                for (auto& file : results)
+                {
+                    // copy file to Imported folder, if necessary
+                    auto fileCopy = editFile.getParentDirectory().getChildFile("Imported").getChildFile(file.getFileName());
+                    file.copyFileTo(fileCopy);
+                    file = fileCopy;
+                    jassert(file.existsAsFile());
+                    
+                    auto fileName         = file.getFileNameWithoutExtension(); // Ex: "Mvt-01_044bpm-01-KB-ORG-Organo MD.flac"
+                    jassert(fileName.substring(0,   4) == "Mvt-");
+                    jassert(fileName.substring(10, 14) == "bpm-");
+                    
+                    // TODO assert that all flac files have same length as midi file for this movement
+                    auto movement         = fileName.substring(4, 6).getIntValue();
+                    auto bpm              = fileName.substring(7, 10).getIntValue();
+                    auto partOrder        = fileName.substring(14, 16);
+                    auto familyShort      = fileName.substring(17, 19);
+                    auto instrumentShort  = fileName.substring(20, 23);
+                    auto partName         = fileName.substring(24);
+                    
+                    if (!juce::Range(1, 99).contains(movement)){
+                        SY_ERR("Invalid movement \t" + fileName);
+                        continue;
+                    }
+                    
+                    if (!juce::Range(10, 360).contains(bpm)){
+                        SY_ERR("Invalid bpm \t" + fileName);
+                        continue;
+                    }
+                    
+                    if (!juce::Range(01, 99).contains(partOrder.getIntValue())){
+                        SY_ERR("Invalid partOrder \t" + fileName);
+                        continue;
+                    }
+                    
+                    auto family = families.find(familyShort);
+                    if (family == families.end()){
+                        SY_ERR("Invalid family \t" + fileName);
+                        continue;
+                    }
+                    
+                    // find parent folder track
+                    tracktion::FolderTrack* parentTrack = nullptr;
+                    for (auto track : tracktion::getTracksOfType<tracktion::FolderTrack> (*edit, true)){
+                        if (track->getName() == family->second){
+                            parentTrack = track;
+                            break;
+                        }
+                    }
+                    if (parentTrack == nullptr){
+                        SY_ERR("Edit doesn't contain folder track \t" + family->second);
+                        break;
+                    }
+                    
+                    tracktion::ClipTrack* clipTrack = nullptr;
+                    for (auto track : tracktion::getAudioTracks(*edit)){
+                        auto substr = track->getName().substring(defaultPosition.length());
+                        if (track->getName().substring(defaultPosition.length()) == partName){
+                            // found existing track
+                            clipTrack = track;
+                            break;
+                        }
+                    }
+                    if (clipTrack == nullptr)
+                    {
+                        // create new track
+                        auto lastSiblingTrack =   parentTrack->getSubTrackList() == nullptr ? nullptr
+                                                : parentTrack->getSubTrackList()->objects.isEmpty() ? nullptr
+                                                : parentTrack->getSubTrackList()->objects.getLast();
+                        clipTrack = edit->insertNewAudioTrack(TrackInsertPoint(parentTrack, lastSiblingTrack), nullptr).get();
+                        clipTrack->setName(defaultPosition + partName);
+                    }
+                    
+                    // TODO assert all FLACs with same bpm have exactly the same length
+                    
+                    // insert wave clip on clip track
+                    te::AudioFile audioFile{ engine, file };
+                    auto start = edit->getTransport().getPosition();
+                    using namespace std::chrono_literals;
+                    int numerator   = edit->tempoSequence.getTimeSigAt(start + 1ms).numerator.get();
+                    int denominator = edit->tempoSequence.getTimeSigAt(start + 1ms).denominator.get();
+                    auto end = start + te::TimeDuration::fromSeconds (audioFile.getLength() /** denominator / 4*/);
+                    auto clip = clipTrack->insertWaveClip (fileName, file,  { { start, end }, {} }, false);
+                    clip->getLoopInfo().setNumerator(numerator);
+                    clip->getLoopInfo().setDenominator(denominator);
+                    clip->getLoopInfo().setBpm(bpm, te::AudioFileInfo::parse (clip->getAudioFile()));
+                    clip->setUsesProxy(false);
+                    clip->setAutoTempo(false); // false to avoid waveform bug resizing clips. 
+                                                // Synchestra app will modify this setAutoTempo when needed
+                }
             }
             else
                 return;
@@ -39,14 +156,28 @@ public:
             createOrLoadEdit (editFile);
         };
         
+        saveButton.onClick = [this] 
+        {
+            // copy <TEMPO_SEQUENCE> into <TEMPOSEQUENCE_ORCHESTRATOR>
+            auto origTempos = edit->state.getOrCreateChildWithName ("TEMPOSEQUENCE_ORCHESTRATOR", nullptr);
+            origTempos.removeAllChildren(nullptr);
+            origTempos.copyPropertiesAndChildrenFrom(edit->tempoSequence.getState(), nullptr);
+            
+            // copy <TEMPO_SEQUENCE> into <TEMPOSEQUENCE_USER_100_PERCENT>
+            auto userTempos_100PCent = edit->state.getOrCreateChildWithName ("TEMPOSEQUENCE_USER_100_PERCENT", nullptr);
+            userTempos_100PCent.removeAllChildren(nullptr);
+            userTempos_100PCent.copyPropertiesAndChildrenFrom(edit->tempoSequence.getState(), nullptr);
+            
+            te::EditFileOperations (*edit).save (true, true, false);
+        };
+        
         updatePlayButtonText();
         updateRecordButtonText();
         editNameLabel.setJustificationType (Justification::centred);
-        Helpers::addAndMakeVisible (*this, { &newEditButton, &playPauseButton, &recordButton, &showEditButton,
+        Helpers::addAndMakeVisible (*this, { &loadEditButton, &newEditButton, &playPauseButton, &recordButton, &showEditButton,
                                              &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel,
-                                             &showWaveformButton, &undoButton, &redoButton, &importMidiButton,
-                                             &reloadButton, &importAudio100Button, &generateMixesButton,
-                                             &importAudio70Button, &importAudio50Button
+                                             &showWaveformButton, &undoButton, &redoButton, &importBPMsButton,
+                                             &reloadButton, &importFLACsButton, &exportFLACsButton, &saveButton
         });
 
         deleteButton.setEnabled (false);
@@ -54,10 +185,10 @@ public:
         auto d = File::getSpecialLocation (File::tempDirectory).getChildFile ("RecordingDemo");
         d.createDirectory();
         
-        if (editFile.existsAsFile())
-            createOrLoadEdit (editFile);
-        else
-            createOrLoadEdit (d.getNonexistentChildFile ("Test", ".tracktionedit", false));
+//        if (editFile.existsAsFile())
+//            createOrLoadEdit (editFile);
+//        else
+//            createOrLoadEdit (d.getNonexistentChildFile ("Test", ".tracktionedit", false));
         
         selectionManager.addChangeListener (this);
         
@@ -68,7 +199,6 @@ public:
 
     ~RecordingDemo() override
     {
-        te::EditFileOperations (*edit).save (true, true, false);
         engine.getTemporaryFileManager().getTempDirectory().deleteRecursively();
     }
 
@@ -81,23 +211,25 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        int w = r.getWidth() / 8;
+        int w = r.getWidth() / 6;
         auto topR = r.removeFromTop (30);
         //newEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        
+        loadEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        saveButton.setBounds (topR.removeFromLeft (w).reduced (2));
         playPauseButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //recordButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        showEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
+        //showEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //newTrackButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //clearTracksButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //deleteButton.setBounds (topR.removeFromLeft (w).reduced (2));
         //undoButton.setBounds(topR.removeFromLeft(w).reduced(2));
         //redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        reloadButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        importMidiButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        importAudio100Button.setBounds(topR.removeFromLeft(w).reduced(2));
-        importAudio70Button.setBounds(topR.removeFromLeft(w).reduced(2));
-        importAudio50Button.setBounds(topR.removeFromLeft(w).reduced(2));
-        generateMixesButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        //redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        //reloadButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        importBPMsButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        importFLACsButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        //exportFLACsButton.setBounds(topR.removeFromLeft(w).reduced(2));
 
         topR = r.removeFromTop (30);
         showWaveformButton.setBounds (topR.removeFromLeft (w * 2).reduced (2));
@@ -115,30 +247,55 @@ private:
     std::unique_ptr<EditComponent> editComponent;
     juce::File editFile {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Import Tempo changes.tracktionedit"};
 
-    TextButton newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
+    TextButton loadEditButton { "Load edit" }, newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
                showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
-               undoButton {"Undo"}, redoButton {"Redo"}, importMidiButton {"Import Midi"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
-               importAudio100Button {"Import Audio 100%"}, importAudio70Button {"Import Audio 70%"}, importAudio50Button {"Import Audio 50%"},
-               generateMixesButton {"Generate Mixes"};
+               undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import Tempo Map"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
+               importFLACsButton {"Import FLACs"}, exportFLACsButton {"Export FLACs"};
     Label editNameLabel { "No Edit Loaded" };
     ToggleButton showWaveformButton { "Show Waveforms" };
+    
+    
+    std::map<String, String> families = {
+        {"WW", "Woodwinds"},
+        {"BR", "Brass"},
+        {"ST", "Strings"},
+        {"KB", "Keyboards"},
+        {"PL", "Plucked"},
+        {"PC", "Percussions"}};
+    
+    juce::String defaultPosition {juce::CharPointer_UTF8 ("Sitting: 090\xc2\xb0.4m ")};
 
     //==============================================================================
     void setupButtons()
     {
+        
+        loadEditButton.onClick  = [this] {
+            auto fc = std::make_shared<FileChooser> ("Please select an edit file to load...",
+                                                     getApplicationSettings()->getValue("lastDirectory"),
+                                                     "*.tracktionedit");
+
+            fc->launchAsync (FileBrowserComponent::openMode + FileBrowserComponent::canSelectFiles,
+                             [this, fc] (const FileChooser&)
+                             {
+                                const auto f = fc->getResult();
+
+                                if (f.existsAsFile()){
+                                    editFile = f;
+                                    createOrLoadEdit (editFile);
+                                    getApplicationSettings()->setValue("lastDirectory", f.getParentDirectory().getFullPathName());
+                                }
+                             });
+        };
+        
         playPauseButton.onClick = [this]
         {
             bool wasRecording = edit->getTransport().isRecording();
             EngineHelpers::togglePlay (*edit);
-            if (wasRecording)
-                te::EditFileOperations (*edit).save (true, true, false);
         };
         recordButton.onClick = [this]
         {
             bool wasRecording = edit->getTransport().isRecording();
             EngineHelpers::toggleRecord (*edit);
-            if (wasRecording)
-                te::EditFileOperations (*edit).save (true, true, false);
         };
         newTrackButton.onClick = [this]
         {
@@ -248,8 +405,6 @@ private:
         };
         
         createTracksAndAssignInputs();
-        
-        //te::EditFileOperations (*edit).save (true, true, false);
         
         editComponent = std::make_unique<EditComponent> (*edit, selectionManager);
         addAndMakeVisible (*editComponent);

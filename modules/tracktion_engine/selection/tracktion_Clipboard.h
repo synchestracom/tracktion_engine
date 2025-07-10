@@ -260,7 +260,8 @@ public:
     
     static TimePosition pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFile,
                                                int& targetTrackIndex,
-                                               TimePosition startTime, bool importTempoChanges);
+                                               TimePosition startTime, bool importTempoChanges,
+                                               bool importNotes = true);
     
 private:
     std::unique_ptr<ContentType> content;

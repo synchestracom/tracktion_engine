@@ -98,7 +98,7 @@ static AudioTrack* getOrInsertAudioTrackNearestIndex (Edit& edit, int trackIndex
 
 TimePosition Clipboard::pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFile,
                                            int& targetTrackIndex,
-                                           TimePosition startTime, bool importTempoChanges)
+                                           TimePosition startTime, bool importTempoChanges, bool importNotes)
 {
     CRASH_TRACER
     juce::OwnedArray<MidiList> lists;
@@ -110,7 +110,7 @@ TimePosition Clipboard::pasteMIDIFileIntoEdit (Edit& edit, const juce::File& mid
     BeatDuration len;
     bool importAsNoteExpression = false;
 
-    if (MidiList::looksLikeMPEData (midiFile))
+    if (importNotes && MidiList::looksLikeMPEData (midiFile))
         importAsNoteExpression = edit.engine.getUIBehaviour()
                                     .showOkCancelAlertBox (TRANS("Import as Note Expression?"),
                                                            TRANS("This MIDI file looks like it contains multi-channel MPE data. Do you want to convert this to note expression or import as multiple clips?"),
@@ -120,7 +120,7 @@ TimePosition Clipboard::pasteMIDIFileIntoEdit (Edit& edit, const juce::File& mid
     if (MidiList::readSeparateTracksFromFile (midiFile, lists,
                                               tempoChangeBeatNumbers, bpms,
                                               numerators, denominators, len,
-                                              importAsNoteExpression))
+                                              importAsNoteExpression, importNotes))
     {
         auto& tempoSequence = edit.tempoSequence;
 

@@ -1600,7 +1600,8 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
                                            juce::Array<int>& numerators,
                                            juce::Array<int>& denominators,
                                            BeatDuration& songLength,
-                                           bool importAsNoteExpression)
+                                           bool importAsNoteExpression,
+                                           bool importNotes)
 {
     songLength = BeatDuration();
     juce::MidiFile midiFile;
@@ -1615,7 +1616,7 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
     juce::MidiMessageSequence tempoEvents;
     midiFile.findAllTempoEvents (tempoEvents);
     midiFile.findAllTimeSigEvents (tempoEvents);
-
+    
     tempoChangeBeatNumbers.clearQuick();
     bpms.clearQuick();
     numerators.clearQuick();
@@ -1628,6 +1629,7 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
     auto tickLen = 1.0 / (timeFormat > 0 ? timeFormat & 0x7fff
                                          : ((timeFormat & 0x7fff) >> 8) * (timeFormat & 0xff));
 
+    auto startBeat_offset = BeatDuration();
     for (int i = 0; i < tempoEvents.getNumEvents(); ++i)
     {
         auto& msg = tempoEvents.getEventPointer (i)->message;
@@ -1655,14 +1657,30 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
                 break;
             }
         }
-
-        tempoChangeBeatNumbers.add (BeatPosition::fromBeats (tickLen * msg.getTimeStamp()));
+        auto startBeat_with_noOffset  = BeatPosition::fromBeats (tickLen * msg.getTimeStamp());
+        auto startBeat_with_oldOffset = BeatPosition::fromBeats (tickLen * msg.getTimeStamp()) + startBeat_offset;
+        auto startBeat_with_newOffset = startBeat_with_oldOffset;
+        if (tempoChangeBeatNumbers.size() > 0)
+        {
+            auto previousChange_startBeat           = tempoChangeBeatNumbers.getLast();
+            auto numBeats_from_previousChange       = startBeat_with_oldOffset - previousChange_startBeat;
+            auto numBeats_from_previousChange_fixed = BeatDuration::fromBeats(numBeats_from_previousChange.inBeats()
+                                                                              * denominators.getLast() / 4.0);
+            startBeat_offset = startBeat_offset
+                                - numBeats_from_previousChange
+                                + numBeats_from_previousChange_fixed;
+            startBeat_with_newOffset = previousChange_startBeat + numBeats_from_previousChange_fixed;
+        }
+        tempoChangeBeatNumbers.add (startBeat_with_newOffset);
         auto bpm = 60.0 / secsPerQuarterNote;
         bpms.add (bpm);
         numerators.add (numer);
         denominators.add (denom);
     }
-
+    
+    if (!importNotes)
+        return true;
+    
     if (importAsNoteExpression)
     {
         juce::MidiMessageSequence destSequence;

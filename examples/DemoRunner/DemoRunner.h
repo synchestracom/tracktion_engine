@@ -32,6 +32,17 @@
 using namespace tracktion::literals;
 using namespace std::literals;
 
+
+// TODO better: put log utils elsewhere
+#define SY_LOG(textToWrite) JUCE_BLOCK_WITH_FORCED_SEMICOLON (juce::String tempDbgBuf = juce::Time::getCurrentTime().toString(false, true) + " "; tempDbgBuf << textToWrite; juce::Logger::writeToLog (tempDbgBuf);)
+#define SY_ERR(textToWrite) { SY_LOG("Error : \t" << textToWrite); jassertfalse; }
+#define SY_SEP "\n=******************************************************************************************************************\n"
+#define SY_LOG_SEP(textToWrite) SY_LOG(SY_SEP << textToWrite << SY_SEP)
+
+#define DONT_SY_LOG(textToWrite) JUCE_BLOCK_WITH_FORCED_SEMICOLON (textToWrite;)
+#define DONT_DBG(textToWrite) JUCE_BLOCK_WITH_FORCED_SEMICOLON (textToWrite;)
+
+
 //==============================================================================
 //==============================================================================
 struct DemoType
@@ -94,7 +105,7 @@ struct DemoTypeBase
 //==============================================================================
 // Include demo files to register them
 #include "demos/AbletonLinkDemo.h"
-#include "demos/ContainerClipDemo.h"
+//#include "demos/ContainerClipDemo.h"
 #include "demos/DistortionEffectDemo.h"
 #include "demos/GlobalQuantiseDemo.h"
 #include "demos/IRPluginDemo.h"
@@ -115,6 +126,10 @@ public:
     //==============================================================================
     DemoRunner()
     {
+        
+        fileLogger.reset(juce::FileLogger::createDateStampedLogger("DemoRunner logs", "DemoRunner-", "log", "DemoRunner logs"));
+        juce::Logger::setCurrentLogger(fileLogger.get());
+        
         Helpers::addAndMakeVisible (*this, { &loadButton, &pluginListButton, &audioSettingsButton, &currentDemoName });
 
         loadButton.onClick          = [this] { showLoadDemoMenu(); };
@@ -143,12 +158,15 @@ public:
 
         currentDemoName.setJustificationType (juce::Justification::centred);
 
-        setSize (800, 600);
+        setSize (1200, 800);
+        
+        loadDemo("Audio Recording");
     }
 
     ~DemoRunner() override
     {
         engine.getTemporaryFileManager().getTempDirectory().deleteRecursively();
+        juce::Logger::setCurrentLogger (nullptr);
     }
 
     //==============================================================================
@@ -173,8 +191,8 @@ public:
         auto r = getLocalBounds();
         auto topR = r.removeFromTop (30);
         const int buttonW = topR.getWidth() / 3;
-        loadButton.setBounds (topR.removeFromLeft (buttonW).reduced (2));
-        pluginListButton.setBounds (topR.removeFromRight (buttonW / 2).reduced (2));
+        //loadButton.setBounds (topR.removeFromLeft (buttonW).reduced (2));
+        //pluginListButton.setBounds (topR.removeFromRight (buttonW / 2).reduced (2));
         audioSettingsButton.setBounds (topR.removeFromRight (buttonW / 2).reduced (2));
         currentDemoName.setBounds (topR.reduced (2));
 
@@ -214,7 +232,8 @@ private:
             currentDemoName.setText ("Error: Unable to load demo", dontSendNotification);
         }
     }
-
+    
+    std::unique_ptr<juce::FileLogger> fileLogger;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoRunner)
 };
