@@ -130,7 +130,7 @@ public:
         fileLogger.reset(juce::FileLogger::createDateStampedLogger("DemoRunner logs", "DemoRunner-", "log", "DemoRunner logs"));
         juce::Logger::setCurrentLogger(fileLogger.get());
         
-        Helpers::addAndMakeVisible (*this, { &loadButton, &pluginListButton, &audioSettingsButton, &currentDemoName });
+        Helpers::addAndMakeVisible (*this, { &loadButton, &pluginListButton, &audioSettingsButton });
 
         loadButton.onClick          = [this] { showLoadDemoMenu(); };
 
@@ -155,8 +155,6 @@ public:
             o.launchAsync();
         };
         audioSettingsButton.onClick = [this] { EngineHelpers::showAudioDeviceSettings (engine); };
-
-        currentDemoName.setJustificationType (juce::Justification::centred);
 
         setSize (1200, 800);
         
@@ -189,12 +187,11 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        auto topR = r.removeFromTop (30);
-        const int buttonW = topR.getWidth() / 3;
+        //auto topR = r.removeFromTop (30);
+        //const int buttonW = topR.getWidth() / 3;
         //loadButton.setBounds (topR.removeFromLeft (buttonW).reduced (2));
         //pluginListButton.setBounds (topR.removeFromRight (buttonW / 2).reduced (2));
-        audioSettingsButton.setBounds (topR.removeFromRight (buttonW / 2).reduced (2));
-        currentDemoName.setBounds (topR.reduced (2));
+        //audioSettingsButton.setBounds (topR.removeFromRight (buttonW / 2).reduced (2));
 
         if (demo)
             demo->setBounds (r.reduced (2));
@@ -205,7 +202,6 @@ private:
     te::Engine engine { ProjectInfo::projectName, std::make_unique<ExtendedUIBehaviour>(), nullptr };
 
     TextButton loadButton { "Load Demo" }, pluginListButton { "Plugin List" }, audioSettingsButton { "Audio Settings" };
-    Label currentDemoName { {}, "No demo loaded" };
     std::unique_ptr<Component> demo;
 
     //==============================================================================
@@ -224,12 +220,7 @@ private:
         if ((demo = DemoTypeManager::createDemo (type, engine)))
         {
             addAndMakeVisible (*demo);
-            currentDemoName.setText (juce::String ("Running Demo: {}").replace ("{}", type), dontSendNotification);
             resized();
-        }
-        else
-        {
-            currentDemoName.setText ("Error: Unable to load demo", dontSendNotification);
         }
     }
     

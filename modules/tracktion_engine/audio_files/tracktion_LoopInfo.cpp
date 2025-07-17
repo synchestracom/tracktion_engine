@@ -81,7 +81,7 @@ void LoopInfo::setBpm (double newBpm, const AudioFileInfo& wi)
     if (wi.sampleRate == 0.0)
         return;
 
-    if (newBpm < 30.0 || newBpm > 1000.0)
+    if (newBpm < 20.0 || newBpm > 1000.0)
         return;
 
     const double currentBpm = getBpm (wi);

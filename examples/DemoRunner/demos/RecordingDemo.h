@@ -136,16 +136,17 @@ public:
                     te::AudioFile audioFile{ engine, file };
                     auto start = edit->getTransport().getPosition();
                     using namespace std::chrono_literals;
-                    int numerator   = edit->tempoSequence.getTimeSigAt(start + 1ms).numerator.get();
-                    int denominator = edit->tempoSequence.getTimeSigAt(start + 1ms).denominator.get();
+                    int numerator   = edit->tempoSequence.getTimeSigAt(start).numerator.get();
+                    int denominator = edit->tempoSequence.getTimeSigAt(start).denominator.get();
                     auto end = start + te::TimeDuration::fromSeconds (audioFile.getLength() /** denominator / 4*/);
                     auto clip = clipTrack->insertWaveClip (fileName, file,  { { start, end }, {} }, false);
+                    clip->setUsesProxy(false);
+                    clip->setAutoTempo(true); // false is to avoid waveform bug resizing clips.
+                                              // Synchestra app will modify this setAutoTempo when needed
+                    
                     clip->getLoopInfo().setNumerator(numerator);
                     clip->getLoopInfo().setDenominator(denominator);
                     clip->getLoopInfo().setBpm(bpm, te::AudioFileInfo::parse (clip->getAudioFile()));
-                    clip->setUsesProxy(false);
-                    clip->setAutoTempo(false); // false to avoid waveform bug resizing clips. 
-                                                // Synchestra app will modify this setAutoTempo when needed
                 }
             }
             else
@@ -176,7 +177,7 @@ public:
         editNameLabel.setJustificationType (Justification::centred);
         Helpers::addAndMakeVisible (*this, { &loadEditButton, &newEditButton, &playPauseButton, &recordButton, &showEditButton,
                                              &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel,
-                                             &showWaveformButton, &undoButton, &redoButton, &importBPMsButton,
+                                             &undoButton, &redoButton, &importBPMsButton, &audioSettingsButton,
                                              &reloadButton, &importFLACsButton, &exportFLACsButton, &saveButton
         });
 
@@ -230,11 +231,8 @@ public:
         importBPMsButton.setBounds(topR.removeFromLeft(w).reduced(2));
         importFLACsButton.setBounds(topR.removeFromLeft(w).reduced(2));
         //exportFLACsButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        audioSettingsButton.setBounds(topR.removeFromLeft(w).reduced(2));
 
-        topR = r.removeFromTop (30);
-        showWaveformButton.setBounds (topR.removeFromLeft (w * 2).reduced (2));
-        editNameLabel.setBounds (topR);
-        
         if (editComponent != nullptr)
             editComponent->setBounds (r);
     }
@@ -249,10 +247,9 @@ private:
 
     TextButton loadEditButton { "Load edit" }, newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
                showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
-               undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import Tempo Map"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
-               importFLACsButton {"Import FLACs"}, exportFLACsButton {"Export FLACs"};
+               undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import Mvt-xx Tempo Map"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
+    importFLACsButton {"Import Mvt-xx FLACs"}, exportFLACsButton {"Export FLACs"}, audioSettingsButton {"Audio settings"};
     Label editNameLabel { "No Edit Loaded" };
-    ToggleButton showWaveformButton { "Show Waveforms" };
     
     
     std::map<String, String> families = {
@@ -320,12 +317,6 @@ private:
                     edit->deleteTrack (track);
             }
         };
-        showWaveformButton.onClick = [this]
-        {
-            auto& evs = editComponent->getEditViewState();
-            evs.drawWaveforms = ! evs.drawWaveforms.get();
-            showWaveformButton.setToggleState (evs.drawWaveforms, dontSendNotification);
-        };
         undoButton.onClick = [this]
         {
             edit->getUndoManager().undo();
@@ -334,6 +325,8 @@ private:
         {
             edit->getUndoManager().redo();
         };
+        
+        audioSettingsButton.onClick = [this] { EngineHelpers::showAudioDeviceSettings (engine); };
     }
     
     void updatePlayButtonText()
@@ -404,7 +397,7 @@ private:
             editFile.revealToUser();
         };
         
-        createTracksAndAssignInputs();
+        //createTracksAndAssignInputs();
         
         editComponent = std::make_unique<EditComponent> (*edit, selectionManager);
         addAndMakeVisible (*editComponent);

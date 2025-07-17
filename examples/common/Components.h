@@ -56,7 +56,7 @@ public:
         showWaveDevices.referTo (state, IDs::showWaveDevices, um, true);
 
         viewX1.referTo (state, IDs::viewX1, um, 0s);
-        viewX2.referTo (state, IDs::viewX2, um, 3000s);
+        viewX2.referTo (state, IDs::viewX2, um, 10000s);
         viewY.referTo (state, IDs::viewY, um, 0);
     }
     

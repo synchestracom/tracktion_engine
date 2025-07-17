@@ -1629,6 +1629,18 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
     auto tickLen = 1.0 / (timeFormat > 0 ? timeFormat & 0x7fff
                                          : ((timeFormat & 0x7fff) >> 8) * (timeFormat & 0xff));
 
+    // get max denominator
+    auto maxDenom = 1;
+    for (int i = 0; i < tempoEvents.getNumEvents(); ++i)
+    {
+        auto& msg = tempoEvents.getEventPointer (i)->message;
+        if (msg.isTimeSignatureMetaEvent())
+        {
+            msg.getTimeSignatureInfo (numer, denom);
+            maxDenom = juce::jmax(maxDenom, denom);
+        }
+    }
+    
     auto startBeat_offset = BeatDuration();
     for (int i = 0; i < tempoEvents.getNumEvents(); ++i)
     {
@@ -1657,6 +1669,13 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
                 break;
             }
         }
+        
+        // all time signatures should have same denominator (otherwise auto-tempo fails)
+        // Ex [4/4, 6/8, 15/16] becomes [16/16, 12/16, 15/16]
+        numer = numer * maxDenom / denom;
+        denom = maxDenom;
+        
+        // custom beat offset fix (Waveform doesn't import midi well when denominator <> 4)
         auto startBeat_with_noOffset  = BeatPosition::fromBeats (tickLen * msg.getTimeStamp());
         auto startBeat_with_oldOffset = BeatPosition::fromBeats (tickLen * msg.getTimeStamp()) + startBeat_offset;
         auto startBeat_with_newOffset = startBeat_with_oldOffset;
@@ -1671,9 +1690,14 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
                                 + numBeats_from_previousChange_fixed;
             startBeat_with_newOffset = previousChange_startBeat + numBeats_from_previousChange_fixed;
         }
+        
+      //tempoChangeBeatNumbers.add (BeatPosition::fromBeats (tickLen * msg.getTimeStamp()));
         tempoChangeBeatNumbers.add (startBeat_with_newOffset);
+        
+      //auto bpm = 4.0 * 60.0 / (denom * secsPerQuarterNote);
         auto bpm = 60.0 / secsPerQuarterNote;
         bpms.add (bpm);
+
         numerators.add (numer);
         denominators.add (denom);
     }
