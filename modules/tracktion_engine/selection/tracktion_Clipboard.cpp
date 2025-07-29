@@ -98,7 +98,8 @@ static AudioTrack* getOrInsertAudioTrackNearestIndex (Edit& edit, int trackIndex
 
 TimePosition Clipboard::pasteMIDIFileIntoEdit (Edit& edit, const juce::File& midiFile,
                                            int& targetTrackIndex,
-                                           TimePosition startTime, bool importTempoChanges, bool importNotes)
+                                           TimePosition startTime, bool importTempoChanges, bool importNotes,
+                                           bool useMaxDenominator)
 {
     CRASH_TRACER
     juce::OwnedArray<MidiList> lists;
@@ -120,7 +121,7 @@ TimePosition Clipboard::pasteMIDIFileIntoEdit (Edit& edit, const juce::File& mid
     if (MidiList::readSeparateTracksFromFile (midiFile, lists,
                                               tempoChangeBeatNumbers, bpms,
                                               numerators, denominators, len,
-                                              importAsNoteExpression, importNotes))
+                                              importAsNoteExpression, importNotes, useMaxDenominator))
     {
         auto& tempoSequence = edit.tempoSequence;
 

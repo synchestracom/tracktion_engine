@@ -25,7 +25,7 @@ public:
         newEditButton.onClick = [this] { createOrLoadEdit(); };
     
         importBPMsButton.onClick = [this] {
-            FileChooser fc ("Import Midi", File::getSpecialLocation (File::userDocumentsDirectory), "*.mid");
+            FileChooser fc ("Import Midi tempo", File::getSpecialLocation (File::userDocumentsDirectory), "*.mid");
             if (fc.browseForFileToOpen())
             {
                 // find Movements track
@@ -36,16 +36,33 @@ public:
                 
                 if (movementsTrack == nullptr)
                 {
-                    SY_ERR("Could not find movements track");
+                    juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", "Could not find metronome track");
                     return;
                 }
                 
                 int movementsTrack_index = movementsTrack->getIndexInEditTrackList();
-                jassert(fc.getResult().getFileName().startsWith("Mvt")); // log error and return if not
                 tracktion::Clipboard::pasteMIDIFileIntoEdit(*edit, fc.getResult(), movementsTrack_index, edit->getTransport().getPosition(), true, false);
             }
-            else
-                return;
+        };
+        
+        importMetronomeButton.onClick = [this] {
+            FileChooser fc ("Import Midi metronome", File::getSpecialLocation (File::userDocumentsDirectory), "*.mid");
+            if (fc.browseForFileToOpen())
+            {
+                // find metronomeTrack
+                Track* metronomeTrack = nullptr;
+                for (auto track : tracktion::getClipTracks(*edit))
+                    if (track->getName() == "Metronome")
+                        metronomeTrack = track;
+                
+                if (metronomeTrack == nullptr)
+                {
+                    juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", "Could not find metronome track");
+                    return;
+                }
+                int metronomeTrack_index = metronomeTrack->getIndexInEditTrackList();
+                tracktion::Clipboard::pasteMIDIFileIntoEdit(*edit, fc.getResult(), metronomeTrack_index, edit->getTransport().getPosition(), true, true, false);
+            }
         };
         
         importFLACsButton.onClick = [this] {
@@ -65,38 +82,38 @@ public:
                     file = fileCopy;
                     jassert(file.existsAsFile());
                     
-                    auto fileName         = file.getFileNameWithoutExtension(); // Ex: "Mvt-01_044bpm-01-KB-ORG-Organo MD.flac"
-                    jassert(fileName.substring(0,   4) == "Mvt-");
-                    jassert(fileName.substring(10, 14) == "bpm-");
+                    auto fileName              = file.getFileNameWithoutExtension();
+                    //                           Ex: "Mvt-01_044bpm-01-KB-ORG-Organo MD"
+                         
+                    auto movement              = fileName.substring(4, 6).getIntValue();
+                    auto bpm                   = fileName.substring(7, 10).getIntValue();
+                    auto partOrder             = fileName.substring(14, 16);
+                    auto familyShort           = fileName.substring(17, 19);
+                    auto instrumentShort       = fileName.substring(20, 23);
+                    auto partName              = fileName.substring(24);
                     
-                    // TODO assert that all flac files have same length as midi file for this movement
-                    auto movement         = fileName.substring(4, 6).getIntValue();
-                    auto bpm              = fileName.substring(7, 10).getIntValue();
-                    auto partOrder        = fileName.substring(14, 16);
-                    auto familyShort      = fileName.substring(17, 19);
-                    auto instrumentShort  = fileName.substring(20, 23);
-                    auto partName         = fileName.substring(24);
-                    
-                    if (!juce::Range(1, 99).contains(movement)){
-                        SY_ERR("Invalid movement \t" + fileName);
-                        continue;
+                    if (fileName.substring(0,   4) != "Mvt-"  ||
+                        fileName.substring(10, 14) != "bpm-"  ||
+                        !juce::Range(1, 99).contains(movement)||
+                        !juce::Range(10, 360).contains(bpm)   ||
+                        !juce::Range(01, 99).contains(partOrder.getIntValue()))
+                    {
+                        juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", 
+                                                                "Invalid file name: \n" + file.getFileName() + "\n\n" +
+                                                                "Valid file name is for example: \n" +
+                                                                "Mvt-01_139bpm-01-WW-FLT-Flauto I.flac");
+                        return;
                     }
                     
-                    if (!juce::Range(10, 360).contains(bpm)){
-                        SY_ERR("Invalid bpm \t" + fileName);
-                        continue;
-                    }
-                    
-                    if (!juce::Range(01, 99).contains(partOrder.getIntValue())){
-                        SY_ERR("Invalid partOrder \t" + fileName);
-                        continue;
-                    }
                     
                     auto family = families.find(familyShort);
                     if (family == families.end()){
-                        SY_ERR("Invalid family \t" + fileName);
-                        continue;
+                        juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "",
+                                                                "Invalid family for: \n" + file.getFileName());
+                        return;
                     }
+                    
+                    // TODO assert that all flac files have same length as midi file for this movement
                     
                     // find parent folder track
                     tracktion::FolderTrack* parentTrack = nullptr;
@@ -107,8 +124,9 @@ public:
                         }
                     }
                     if (parentTrack == nullptr){
-                        SY_ERR("Edit doesn't contain folder track \t" + family->second);
-                        break;
+                        juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "",
+                                                                "Edit doesn't contain folder track \t" + family->second);
+                        return;
                     }
                     
                     tracktion::ClipTrack* clipTrack = nullptr;
@@ -149,8 +167,6 @@ public:
                     clip->getLoopInfo().setBpm(bpm, te::AudioFileInfo::parse (clip->getAudioFile()));
                 }
             }
-            else
-                return;
         };
         
         reloadButton.onClick = [this] {
@@ -177,7 +193,7 @@ public:
         editNameLabel.setJustificationType (Justification::centred);
         Helpers::addAndMakeVisible (*this, { &loadEditButton, &newEditButton, &playPauseButton, &recordButton, &showEditButton,
                                              &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel,
-                                             &undoButton, &redoButton, &importBPMsButton, &audioSettingsButton,
+                                             &undoButton, &redoButton, &importBPMsButton, &importMetronomeButton, &audioSettingsButton,
                                              &reloadButton, &importFLACsButton, &exportFLACsButton, &saveButton
         });
 
@@ -212,26 +228,14 @@ public:
     void resized() override
     {
         auto r = getLocalBounds();
-        int w = r.getWidth() / 6;
         auto topR = r.removeFromTop (30);
-        //newEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        
-        loadEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        saveButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        playPauseButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        //recordButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        //showEditButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        //newTrackButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        //clearTracksButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        //deleteButton.setBounds (topR.removeFromLeft (w).reduced (2));
-        //undoButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        //redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        //redoButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        //reloadButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        importBPMsButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        importFLACsButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        //exportFLACsButton.setBounds(topR.removeFromLeft(w).reduced(2));
-        audioSettingsButton.setBounds(topR.removeFromLeft(w).reduced(2));
+        loadEditButton.setBounds (topR.removeFromLeft (100).reduced (2));
+        saveButton.setBounds (topR.removeFromLeft (100).reduced (2));
+        playPauseButton.setBounds (topR.removeFromLeft (60).reduced (2));
+        importBPMsButton.setBounds(topR.removeFromLeft(200).reduced(2));
+        importMetronomeButton.setBounds(topR.removeFromLeft(220).reduced(2));
+        importFLACsButton.setBounds(topR.removeFromLeft(200).reduced(2));
+        audioSettingsButton.setBounds(topR.removeFromRight(120).reduced(2));
 
         if (editComponent != nullptr)
             editComponent->setBounds (r);
@@ -245,10 +249,11 @@ private:
     std::unique_ptr<EditComponent> editComponent;
     juce::File editFile {"/Users/mickael/Library/Synchestra/Pieces/Ravel - Bolero/Import Tempo changes.tracktionedit"};
 
-    TextButton loadEditButton { "Load edit" }, newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
-               showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
-               undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import Mvt-xx Tempo Map"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
-    importFLACsButton {"Import Mvt-xx FLACs"}, exportFLACsButton {"Export FLACs"}, audioSettingsButton {"Audio settings"};
+    TextButton  loadEditButton { "Load edit" }, newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
+                showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
+                undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import MIDI tempo Mvt-xx"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
+                importMetronomeButton {"Import MIDI Metronome Mvt-xx"},
+                importFLACsButton {"Import FLACs Mvt-xx"}, exportFLACsButton {"Export FLACs"}, audioSettingsButton {"Audio settings"};
     Label editNameLabel { "No Edit Loaded" };
     
     

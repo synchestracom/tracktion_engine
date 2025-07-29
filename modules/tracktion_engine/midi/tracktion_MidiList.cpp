@@ -1601,7 +1601,8 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
                                            juce::Array<int>& denominators,
                                            BeatDuration& songLength,
                                            bool importAsNoteExpression,
-                                           bool importNotes)
+                                           bool importNotes,
+                                           bool useMaxDenominator)
 {
     songLength = BeatDuration();
     juce::MidiFile midiFile;
@@ -1670,29 +1671,35 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
             }
         }
         
-        // all time signatures should have same denominator (otherwise auto-tempo fails)
-        // Ex [4/4, 6/8, 15/16] becomes [16/16, 12/16, 15/16]
-        numer = numer * maxDenom / denom;
-        denom = maxDenom;
-        
-        // custom beat offset fix (Waveform doesn't import midi well when denominator <> 4)
-        auto startBeat_with_noOffset  = BeatPosition::fromBeats (tickLen * msg.getTimeStamp());
-        auto startBeat_with_oldOffset = BeatPosition::fromBeats (tickLen * msg.getTimeStamp()) + startBeat_offset;
-        auto startBeat_with_newOffset = startBeat_with_oldOffset;
-        if (tempoChangeBeatNumbers.size() > 0)
+        if (useMaxDenominator)
         {
-            auto previousChange_startBeat           = tempoChangeBeatNumbers.getLast();
-            auto numBeats_from_previousChange       = startBeat_with_oldOffset - previousChange_startBeat;
-            auto numBeats_from_previousChange_fixed = BeatDuration::fromBeats(numBeats_from_previousChange.inBeats()
-                                                                              * denominators.getLast() / 4.0);
-            startBeat_offset = startBeat_offset
-                                - numBeats_from_previousChange
-                                + numBeats_from_previousChange_fixed;
-            startBeat_with_newOffset = previousChange_startBeat + numBeats_from_previousChange_fixed;
+            // all time signatures should have same denominator (otherwise auto-tempo fails)
+            // Ex [4/4, 6/8, 15/16] becomes [16/16, 12/16, 15/16]
+            numer = numer * maxDenom / denom;
+            denom = maxDenom;
+            
+            // custom beat offset fix (Waveform doesn't import midi well when denominator <> 4)
+            auto startBeat_with_oldOffset = BeatPosition::fromBeats (tickLen * msg.getTimeStamp()) + startBeat_offset;
+            auto startBeat_with_newOffset = startBeat_with_oldOffset;
+            if (tempoChangeBeatNumbers.size() > 0)
+            {
+                auto previousChange_startBeat           = tempoChangeBeatNumbers.getLast();
+                auto numBeats_from_previousChange       = startBeat_with_oldOffset - previousChange_startBeat;
+                auto numBeats_from_previousChange_fixed = BeatDuration::fromBeats(numBeats_from_previousChange.inBeats()
+                                                                                  * denominators.getLast() / 4.0);
+                startBeat_offset = startBeat_offset
+                                    - numBeats_from_previousChange
+                                    + numBeats_from_previousChange_fixed;
+                startBeat_with_newOffset = previousChange_startBeat + numBeats_from_previousChange_fixed;
+            }
+            
+            tempoChangeBeatNumbers.add (startBeat_with_newOffset);
+        }
+        else 
+        {
+            tempoChangeBeatNumbers.add (BeatPosition::fromBeats (tickLen * msg.getTimeStamp()));
         }
         
-      //tempoChangeBeatNumbers.add (BeatPosition::fromBeats (tickLen * msg.getTimeStamp()));
-        tempoChangeBeatNumbers.add (startBeat_with_newOffset);
         
       //auto bpm = 4.0 * 60.0 / (denom * secsPerQuarterNote);
         auto bpm = 60.0 / secsPerQuarterNote;

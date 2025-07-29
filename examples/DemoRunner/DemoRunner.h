@@ -118,6 +118,12 @@ struct DemoTypeBase
 #include "demos/StepSequencerDemo.h"
 
 
+class CustomEngineBehaviour : public tracktion::EngineBehaviour
+{
+public:
+    //bool lengthOfOneBeatDependsOnTimeSignature() override { return false; }
+};
+
 //==============================================================================
 //==============================================================================
 class DemoRunner  : public Component
@@ -199,7 +205,7 @@ public:
 
 private:
     //==============================================================================
-    te::Engine engine { ProjectInfo::projectName, std::make_unique<ExtendedUIBehaviour>(), nullptr };
+    te::Engine engine { ProjectInfo::projectName, std::make_unique<ExtendedUIBehaviour>(), std::make_unique<CustomEngineBehaviour>() };
 
     TextButton loadButton { "Load Demo" }, pluginListButton { "Plugin List" }, audioSettingsButton { "Audio Settings" };
     std::unique_ptr<Component> demo;

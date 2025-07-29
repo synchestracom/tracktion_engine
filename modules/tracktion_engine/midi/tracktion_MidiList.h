@@ -169,7 +169,8 @@ public:
                                             juce::Array<int>& denominators,
                                             BeatDuration& songLength,
                                             bool importAsNoteExpression,
-                                            bool importNotes = true);
+                                            bool importNotes = true,
+                                            bool useMaxDenominator = true);
 
     //==============================================================================
     template <typename Type>
