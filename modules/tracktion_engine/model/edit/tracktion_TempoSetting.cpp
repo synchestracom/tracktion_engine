@@ -58,6 +58,9 @@ void TempoSetting::set (BeatPosition newStartBeat, double newBPM, float newCurve
     bpm.forceUpdateOfCachedValue();
     curve.forceUpdateOfCachedValue();
 
+    //TODO change min an max BPM
+    //jassert(newBPM >= minBPM);
+    //jassert(newBPM <= maxBPM);
     newBPM   = juce::jlimit (minBPM, maxBPM, newBPM);
     newCurve = juce::jlimit (-1.0f, 1.0f, newCurve);
 
