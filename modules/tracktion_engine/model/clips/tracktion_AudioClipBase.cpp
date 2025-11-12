@@ -416,7 +416,9 @@ TimeDuration AudioClipBase::getMaximumLength()
             return 100000.0_td;
 
         if (getAutoTempo())
-            return edit.tempoSequence.toTime (getStartBeat() + BeatDuration::fromBeats (loopInfo.getNumBeats()))
+            return edit.tempoSequence.toTime (getStartBeat() + BeatDuration::fromBeats (loopInfo.getNumBeats()
+                                                                                        //custom fix for Synchestra
+                                                                                        * loopInfo.getDenominator() / 4.0))
                      - getPosition().getStart();
 
         return getSourceLength() / speedRatio;
