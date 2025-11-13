@@ -40,10 +40,10 @@ public:
     static juce::ValueTree create (BeatPosition startBeat, double bpm, float curve);
 
     /** Minimum BPM a setting can have. */
-    static constexpr double minBPM = 20.0;
+    static constexpr double minBPM = 20.0  /* min bpm in Waveform */ * 0.4  /* min  40% in Synchestra */;
 
     /** Maximum BPM a setting can have. */
-    static constexpr double maxBPM = 300.0;
+    static constexpr double maxBPM = 300.0 /* max bpm in Waveform */ * 3.0  /* max 300% in Synchestra */;
 
     //==============================================================================
     /** Returns the description of this Selectable. */
