@@ -24,6 +24,7 @@ public:
     {
         newEditButton.onClick = [this] { createOrLoadEdit(); };
     
+        //TODO alert if position % 1000 is > 1
         importBPMsButton.onClick = [this] {
             FileChooser fc ("Import Midi tempo", File::getSpecialLocation (File::userDocumentsDirectory), "*.mid");
             if (fc.browseForFileToOpen())
@@ -159,8 +160,7 @@ public:
                     auto end = start + te::TimeDuration::fromSeconds (audioFile.getLength() /** denominator / 4*/);
                     auto clip = clipTrack->insertWaveClip (fileName, file,  { { start, end }, {} }, false);
                     clip->setUsesProxy(false);
-                    clip->setAutoTempo(true); // false is to avoid waveform bug resizing clips.
-                                              // Synchestra app will modify this setAutoTempo when needed
+                    clip->setAutoTempo(false); // Synchestra app will modify this setAutoTempo when needed
                     
                     clip->getLoopInfo().setNumerator(numerator);
                     clip->getLoopInfo().setDenominator(denominator);
@@ -184,6 +184,11 @@ public:
             auto userTempos_100PCent = edit->state.getOrCreateChildWithName ("TEMPOSEQUENCE_USER_100_PERCENT", nullptr);
             userTempos_100PCent.removeAllChildren(nullptr);
             userTempos_100PCent.copyPropertiesAndChildrenFrom(edit->tempoSequence.getState(), nullptr);
+            
+            // copy <TEMPO_SEQUENCE> into <TEMPOSEQUENCE_USER_100_PERCENT>
+            auto userTempos_xxxPCent = edit->state.getOrCreateChildWithName ("TEMPOSEQUENCE_USER_xxx_PERCENT", nullptr);
+            userTempos_xxxPCent.removeAllChildren(nullptr);
+            userTempos_xxxPCent.copyPropertiesAndChildrenFrom(edit->tempoSequence.getState(), nullptr);
             
             te::EditFileOperations (*edit).save (true, true, false);
         };
