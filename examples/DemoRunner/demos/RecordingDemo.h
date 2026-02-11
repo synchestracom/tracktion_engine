@@ -157,14 +157,22 @@ public:
                     using namespace std::chrono_literals;
                     int numerator   = edit->tempoSequence.getTimeSigAt(start).numerator.get();
                     int denominator = edit->tempoSequence.getTimeSigAt(start).denominator.get();
-                    auto end = start + te::TimeDuration::fromSeconds (audioFile.getLength() /** denominator / 4*/);
+                    
+                    // maybe later to fix Waveform's "Remove silence" bug when denominator != 4
+                    //denominator = 4;
+                    
+                    auto end = start + te::TimeDuration::fromSeconds (audioFile.getLength());
                     auto clip = clipTrack->insertWaveClip (fileName, file,  { { start, end }, {} }, false);
                     clip->setUsesProxy(false);
-                    clip->setAutoTempo(false); // Synchestra app will modify this setAutoTempo when needed
+                    clip->setAutoTempo(true);
+                    clip->setAutoPitch(true);
+                    clip->setMuted(false);
+                    clip->setLength(clip->getMaximumLength(), true);
                     
                     clip->getLoopInfo().setNumerator(numerator);
                     clip->getLoopInfo().setDenominator(denominator);
                     clip->getLoopInfo().setBpm(bpm, te::AudioFileInfo::parse (clip->getAudioFile()));
+                    clip->getLoopInfo().setRootNote(60); // all clips have C as root note, even if current key is different
                 }
             }
         };
@@ -268,7 +276,11 @@ private:
         {"ST", "Strings"},
         {"KB", "Keyboards"},
         {"PL", "Plucked"},
-        {"PC", "Percussions"}};
+        {"PC", "Percussions"},
+        {"FR", "Fretted"},
+        {"EL", "Electronic"},
+        {"CH", "Choir"},
+        {"VO", "Vocals"}};
     
     juce::String defaultPosition {juce::CharPointer_UTF8 ("Sitting: 090\xc2\xb0.4m ")};
 
@@ -296,12 +308,12 @@ private:
         
         playPauseButton.onClick = [this]
         {
-            bool wasRecording = edit->getTransport().isRecording();
+            //bool wasRecording = edit->getTransport().isRecording();
             EngineHelpers::togglePlay (*edit);
         };
         recordButton.onClick = [this]
         {
-            bool wasRecording = edit->getTransport().isRecording();
+            //bool wasRecording = edit->getTransport().isRecording();
             EngineHelpers::toggleRecord (*edit);
         };
         newTrackButton.onClick = [this]
