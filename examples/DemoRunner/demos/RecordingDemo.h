@@ -133,8 +133,9 @@ public:
                     tracktion::ClipTrack* clipTrack = nullptr;
                     for (auto track : tracktion::getAudioTracks(*edit)){
                         auto substr = track->getName().substring(defaultPosition.length());
-                        if (track->getName().substring(defaultPosition.length()) == partName){
-                            // found existing track
+                        if (track->getName().substring(defaultPosition.length()) == partName &&
+                            track->getParentFolderTrack()->getName() == family->second){
+                            // found existing track in the same family
                             clipTrack = track;
                             break;
                         }
@@ -274,6 +275,7 @@ private:
         {"WW", "Woodwinds"},
         {"BR", "Brass"},
         {"ST", "Strings"},
+        {"S2", "Strings 2"},
         {"KB", "Keyboards"},
         {"PL", "Plucked"},
         {"PC", "Percussions"},
