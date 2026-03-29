@@ -106,6 +106,16 @@ public:
                         return;
                     }
                     
+                    juce::StringArray wrongSuffixes = {" LH"," RH", " MS", " MD"};
+                    if (partName.endsWith(" LH") || partName.endsWith(" RH") ||
+                        partName.endsWith(" MS") || partName.endsWith(" MD"))
+                    {
+                        juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "",
+                                                                "Invalid file name: \n" + file.getFileName() + "\n\n" +
+                                                                "Put _ before suffixes " + wrongSuffixes.joinIntoString(", "));
+                        return;
+                    }
+                    
                     
                     auto family = families.find(familyShort);
                     if (family == families.end()){
@@ -278,7 +288,7 @@ private:
         {"S2", "Strings 2"},
         {"KB", "Keyboards"},
         {"PL", "Plucked"},
-        {"PC", "Percussions"},
+        {"PC", "Percussion"},
         {"FR", "Fretted"},
         {"EL", "Electronic"},
         {"CH", "Choir"},
