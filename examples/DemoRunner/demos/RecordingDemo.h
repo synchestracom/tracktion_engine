@@ -77,10 +77,22 @@ public:
                 
                 for (auto& file : results)
                 {
+                    
                     // copy file to Imported folder, if necessary
-                    auto fileCopy = editFile.getParentDirectory().getChildFile("Imported").getChildFile(file.getFileName());
-                    file.copyFileTo(fileCopy);
-                    file = fileCopy;
+                    auto destFile = editFile.getParentDirectory().getChildFile("Imported").getChildFile(file.getFileName());
+                    if (file != destFile)
+                    {
+                        if (file.copyFileTo(destFile))
+                            DBG("copied flie to " << destFile.getFullPathName());
+                        else
+                        {
+                            juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "",
+                                                                    "Error: couldn't copy file to: \n" + destFile.getFullPathName());
+                            return;
+                        }
+                    }
+                    
+                    file = destFile;
                     jassert(file.existsAsFile());
                     
                     auto fileName              = file.getFileNameWithoutExtension();
@@ -174,6 +186,15 @@ public:
                     
                     auto end = start + te::TimeDuration::fromSeconds (audioFile.getLength());
                     auto clip = clipTrack->insertWaveClip (fileName, file,  { { start, end }, {} }, false);
+                    if (!clip->getCurrentSourceFile().exists())
+                    {
+                        // happens sometimes, don't know why :-(
+                        juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "",
+                                                                "Error on linking clip with file\n" + file.getFullPathName() +
+                                                                "\n\n You should probably restart new project from template :-(");
+                        return;
+                    }
+                    
                     clip->setUsesProxy(false);
                     clip->setAutoTempo(true);
                     clip->setAutoPitch(true);
