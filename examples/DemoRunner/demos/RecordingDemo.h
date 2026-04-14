@@ -230,7 +230,7 @@ public:
             userTempos_xxxPCent.removeAllChildren(nullptr);
             userTempos_xxxPCent.copyPropertiesAndChildrenFrom(edit->tempoSequence.getState(), nullptr);
             
-            te::EditFileOperations (*edit).save (true, true, false);
+            te::EditFileOperations (*edit).saveAs();
         };
         
         updatePlayButtonText();
@@ -296,7 +296,7 @@ private:
 
     TextButton  loadEditButton { "Load edit" }, newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
                 showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
-                undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import MIDI tempo Mvt-xx"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
+                undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import MIDI tempo Mvt-xx"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit as"},
                 importMetronomeButton {"Import MIDI Metronome Mvt-xx"},
                 importFLACsButton {"Import FLACs Mvt-xx"}, exportFLACsButton {"Export FLACs"}, audioSettingsButton {"Audio settings"};
     Label editNameLabel { "No Edit Loaded" };
