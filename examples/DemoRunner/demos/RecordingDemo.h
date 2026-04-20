@@ -107,9 +107,9 @@ public:
                     
                     if (fileName.substring(0,   4) != "Mvt-"  ||
                         fileName.substring(10, 14) != "bpm-"  ||
-                        !juce::Range(1, 99).contains(movement)||
-                        !juce::Range(10, 360).contains(bpm)   ||
-                        !juce::Range(01, 99).contains(partOrder.getIntValue()))
+                        !juce::Range(1, 100).contains(movement)||
+                        !juce::Range(10, 361).contains(bpm)   ||
+                        !juce::Range(01, 100).contains(partOrder.getIntValue()))
                     {
                         juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", 
                                                                 "Invalid file name: \n" + file.getFileName() + "\n\n" +
