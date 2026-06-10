@@ -551,6 +551,9 @@ public:
     {
         if (playbackSpeedRatio == speedRatio)
             return;
+        
+        if (almostEqual(playbackSpeedRatio, speedRatio))
+            return;
 
         playbackSpeedRatio = speedRatio;
         setSpeedAndPitch (playbackSpeedRatio, semitonesShift);
@@ -559,6 +562,9 @@ public:
     void setPitch (double semitones)
     {
         if (semitonesShift == semitones)
+            return;
+        
+        if (almostEqual(semitonesShift, semitones))
             return;
 
         semitonesShift = semitones;

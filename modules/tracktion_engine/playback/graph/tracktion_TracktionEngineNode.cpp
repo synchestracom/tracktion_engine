@@ -62,6 +62,8 @@ void ProcessState::update (double newSampleRate, juce::Range<int64_t> newReferen
 
 void ProcessState::setPlaybackSpeedRatio (double newRatio)
 {
+    if (!almostEqual(playbackSpeedRatio, newRatio))
+        int i = 0;
     playbackSpeedRatio = newRatio;
 }
 

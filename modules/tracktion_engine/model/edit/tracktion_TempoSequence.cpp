@@ -570,7 +570,7 @@ void TempoSequence::updateTempoData()
             timeSigChanges.push_back ({ ts->startBeatNumber.get(), ts->numerator.get(), ts->denominator.get(), ts->triplets.get() });
 
         for (auto pc : edit.pitchSequence.getPitches())
-            keyChanges.push_back ({ pc->startBeat.get(), { pc->pitch.get(), static_cast<int> (pc->scale.get()) } });
+            keyChanges.push_back ({ pc->startBeat.get(), { juce::roundToInt(pc->pitch.get()), static_cast<int> (pc->scale.get()) } });
     }
 
     const bool useDenominator = edit.engine.getEngineBehaviour().lengthOfOneBeatDependsOnTimeSignature();
