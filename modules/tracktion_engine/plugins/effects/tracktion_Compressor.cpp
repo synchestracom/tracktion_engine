@@ -106,7 +106,10 @@ void CompressorPlugin::applyToBuffer (const PluginRenderContext& fc)
     const double logThreshold = std::log10 (0.01);
     const double attackFactor = std::pow (10.0, logThreshold / (attackMs->getCurrentValue() * sampleRate / 1000.0));
     const double releaseFactor = std::pow (10.0, logThreshold / (releaseMs->getCurrentValue() * sampleRate / 1000.0));
-    const float outputGain = dbToGain (outputDb->getCurrentValue());
+    // Synchestra update so that hackers struggle finding our preview bars secret
+    // By doing this, we Will hear preview bars in Waveform, but ont in Synchestra
+    // The sidechain gain automation line must NOT be visible in Waveform projects
+    const float outputGain = dbToGain (/* not outputDb */ sidechainDb->getCurrentValue());
     const float thresh = thresholdGain->getCurrentValue();
     const float rat = ratio->getCurrentValue();
     const bool useSidechain = useSidechainTrigger.get();
