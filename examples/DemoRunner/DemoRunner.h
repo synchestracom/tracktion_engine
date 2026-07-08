@@ -133,7 +133,7 @@ public:
     DemoRunner()
     {
         
-        fileLogger.reset(juce::FileLogger::createDateStampedLogger("DemoRunner logs", "DemoRunner-", "log", "DemoRunner logs"));
+        fileLogger.reset(juce::FileLogger::createDateStampedLogger("SY_importer logs", "SY_importer-", "log", "SY_importer logs"));
         juce::Logger::setCurrentLogger(fileLogger.get());
         
         Helpers::addAndMakeVisible (*this, { &loadButton, &pluginListButton, &audioSettingsButton });
