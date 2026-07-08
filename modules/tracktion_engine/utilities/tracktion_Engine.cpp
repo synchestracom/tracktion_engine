@@ -201,7 +201,7 @@ MidiLearnState& Engine::getMidiLearnState() const
     return *midiLearnState;
 }
 
-PluginManager& Engine::getPluginManager() const
+PluginManager& Engine::getPluginManager() const 
 {
     jassert (pluginManager != nullptr);
     return *pluginManager;
