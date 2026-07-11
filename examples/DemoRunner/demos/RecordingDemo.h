@@ -209,6 +209,82 @@ public:
             }
         };
         
+        createZIPsButton.onClick = [this] {
+            auto workFolder = editFile.getParentDirectory();
+            auto destFolder = workFolder.getParentDirectory();
+            auto workID = edit->state.getChildWithName("SY_EDIT").getProperty("workID").toString();
+            if (workID.isEmpty())
+            {
+                juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", "<SY_EDIT workID='...'> is missing");
+                return;
+            }
+            
+            auto currentZipSize         = 0;
+            auto maxZipSize             = 250000000; // keep our zips small for old mobile devices
+            auto currentZipNumber       = 1;
+            auto currentZipNamePrefix   = workID + " - " + workFolder.getFileName() + " DL";
+            auto currentZipName         = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
+            auto currentZipFile         = destFolder.getChildFile(currentZipName);
+            auto workFiles              = juce::Array<juce::File>{};
+            auto allowedFileTypes       = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
+            auto currentZipEntryFiles   = juce::Array<juce::File>{};
+            workFolder.findChildFiles(workFiles, juce::File::findFilesAndDirectories, true);
+            workFiles.sort();
+            
+            auto rootFolder             = workFolder.getParentDirectory();
+            auto sub_folders = rootFolder.findChildFiles(File::TypesOfFileToFind::findDirectories, true);
+            
+            auto zip_builder = juce::ZipFile::Builder{};
+            for(int sub_index = 0; sub_index < sub_folders.size(); ++sub_index){
+                auto preset_files = sub_folders[sub_index].findChildFiles(File::TypesOfFileToFind::findFiles, false);
+
+                for(int preset_index = 0; preset_index < preset_files.size(); ++preset_index){
+                    auto compressionLevel = preset_files[preset_index].getFileExtension().equalsIgnoreCase(".flac") ? 0 : 5;
+                    zip_builder.addFile(preset_files[preset_index], compressionLevel, preset_files[preset_index].getRelativePathFrom(rootFolder));
+                }
+            }
+            
+            if (currentZipFile.existsAsFile())
+                currentZipFile.deleteFile();
+            auto stream     = currentZipFile.createOutputStream();
+            zip_builder .writeToStream(*stream.get(), nullptr);
+            return;
+            
+            for (auto& workFile : workFiles)
+            {
+                if (workFile.isDirectory() || !allowedFileTypes.contains(workFile.getFileExtension()))
+                    continue;
+                    
+                auto fileSize = workFile.getSize();
+                currentZipSize += fileSize;
+                currentZipEntryFiles.add(workFile);
+                
+                if (currentZipSize > maxZipSize || workFile == workFiles.getLast())
+                {
+                    // Zip current zip
+                    if (currentZipFile.existsAsFile())
+                        currentZipFile.deleteFile();
+                    auto stream     = currentZipFile.createOutputStream();
+                    auto zipBuilder = juce::ZipFile::Builder{};
+                    for (auto& zipEntryFile : currentZipEntryFiles)
+                    {
+                        // don't compress FLAC files: makes the unzip faster.
+                        auto compressionLevel = zipEntryFile.getFileExtension().equalsIgnoreCase("flac") ? 0 : 5;
+                        auto relativePath = zipEntryFile.getParentDirectory().getRelativePathFrom(workFolder);
+                        zipBuilder.addFile(zipEntryFile, compressionLevel);
+                    }
+                    zipBuilder.writeToStream(*stream.get(), nullptr);
+                    
+                    // next files will be in a new zip
+                    currentZipNumber ++;
+                    currentZipName = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
+                    currentZipFile = destFolder.getChildFile(currentZipName);
+                    currentZipSize = 0;
+                    currentZipEntryFiles.clear();
+                }
+            }
+        };
+        
         reloadButton.onClick = [this] {
             createOrLoadEdit (editFile);
         };
@@ -238,7 +314,7 @@ public:
         Helpers::addAndMakeVisible (*this, { &loadEditButton, &newEditButton, &playPauseButton, &recordButton, &showEditButton,
                                              &newTrackButton, &clearTracksButton, &deleteButton, &editNameLabel,
                                              &undoButton, &redoButton, &importBPMsButton, &importMetronomeButton, &audioSettingsButton,
-                                             &reloadButton, &importFLACsButton, &exportFLACsButton, &saveButton
+                                             &reloadButton, &importFLACsButton, &exportFLACsButton, &saveButton, &createZIPsButton
         });
 
         deleteButton.setEnabled (false);
@@ -273,12 +349,13 @@ public:
     {
         auto r = getLocalBounds();
         auto topR = r.removeFromTop (30);
-        loadEditButton.setBounds (topR.removeFromLeft (100).reduced (2));
-        saveButton.setBounds (topR.removeFromLeft (100).reduced (2));
-        playPauseButton.setBounds (topR.removeFromLeft (60).reduced (2));
+        loadEditButton.setBounds (topR.removeFromLeft (90).reduced (2));
+        saveButton.setBounds (topR.removeFromLeft (90).reduced (2));
+        playPauseButton.setBounds (topR.removeFromLeft (50).reduced (2));
         importBPMsButton.setBounds(topR.removeFromLeft(200).reduced(2));
         importMetronomeButton.setBounds(topR.removeFromLeft(220).reduced(2));
-        importFLACsButton.setBounds(topR.removeFromLeft(200).reduced(2));
+        importFLACsButton.setBounds(topR.removeFromLeft(180).reduced(2));
+        createZIPsButton.setBounds(topR.removeFromLeft(100).reduced(2));
         audioSettingsButton.setBounds(topR.removeFromRight(120).reduced(2));
 
         if (editComponent != nullptr)
@@ -296,7 +373,7 @@ private:
     TextButton  loadEditButton { "Load edit" }, newEditButton { "New" }, playPauseButton { "Play" }, recordButton { "Record" },
                 showEditButton { "Show Edit" }, newTrackButton { "New Track" }, clearTracksButton { "Clear Tracks" }, deleteButton { "Delete" },
                 undoButton {"Undo"}, redoButton {"Redo"}, importBPMsButton {"Import MIDI tempo Mvt-xx"}, reloadButton {"Reload Edit"}, saveButton {"Save Edit"},
-                importMetronomeButton {"Import MIDI Metronome Mvt-xx"},
+                importMetronomeButton {"Import MIDI Metronome Mvt-xx"}, createZIPsButton {"Create ZIPs"},
                 importFLACsButton {"Import FLACs Mvt-xx"}, exportFLACsButton {"Export FLACs"}, audioSettingsButton {"Audio settings"};
     Label editNameLabel { "No Edit Loaded" };
     
