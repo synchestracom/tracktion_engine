@@ -234,51 +234,51 @@ public:
             auto rootFolder  = workFolder.getParentDirectory();
             auto sub_folders = workFolder.findChildFiles(File::TypesOfFileToFind::findDirectories, true);
             workFiles = workFolder.findChildFiles(File::TypesOfFileToFind::findFiles, true);
+            workFiles.sort();
             
             if (currentZipFile.existsAsFile())
                 currentZipFile.deleteFile();
             
-            auto zip_builder = juce::ZipFile::Builder{};
+            auto zip_builder = std::make_unique<juce::ZipFile::Builder>();
             
             
             
             for (const auto& file : workFiles)
             {
-                if (!allowedExtensions.contains(workFile.getFileExtension()))
+                if (!allowedExtensions.contains(file.getFileExtension()))
                     continue;
                 auto compressionLevel = file.getFileExtension().equalsIgnoreCase(".flac") ? 0 : 5;
-                zip_builder.addFile(file, compressionLevel, file.getRelativePathFrom(rootFolder));
-            }
-            
-            auto stream     = currentZipFile.createOutputStream();
-            zip_builder .writeToStream(*stream.get(), nullptr);
-            return;
-            
-            
-            
-            
-            
-            for (const auto& subfolder : sub_folders)
-            {
-#if JUCE_MAC
-                if (!subfolder.getFullPathName().convertToPrecomposedUnicode().contains(
-                    workFolder.getFullPathName().convertToPrecomposedUnicode()))
-                    continue; // ignore sibling works
-#else
-                if (subfolder != workFolder && !subfolder.isAChildOf(workFolder))
-                    continue; // ignore sibling works
-#endif
-                const auto& files = subfolder.findChildFiles(File::TypesOfFileToFind::findFiles, false);
-                for (const auto& file : files)
+                zip_builder->addFile(file, compressionLevel, file.getRelativePathFrom(rootFolder));
+                
+                auto fileSize = file.getSize();
+                currentZipSize += fileSize;
+                
+                if (currentZipSize > maxZipSize || file == workFiles.getLast())
                 {
-                    auto compressionLevel = file.getFileExtension().equalsIgnoreCase(".flac") ? 0 : 5;
-                    zip_builder.addFile(file, compressionLevel, file.getRelativePathFrom(rootFolder));
+                    // Zip current zip
+                    
+//                    if (currentZipFile.existsAsFile())
+//                        currentZipFile.deleteFile();
+                    
+                    auto stream     = currentZipFile.createOutputStream();
+                    zip_builder->writeToStream(*stream.get(), nullptr);
+                    zip_builder.reset(new juce::ZipFile::Builder());
+                    
+                    // next files will be in a new zip
+                    currentZipNumber ++;
+                    currentZipName = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
+                    currentZipFile = destFolder.getChildFile(currentZipName);
+                    currentZipSize = 0;
+                    currentZipEntryFiles.clear();
                 }
             }
             
-            //auto stream     = currentZipFile.createOutputStream();
-            zip_builder .writeToStream(*stream.get(), nullptr);
+//            auto stream     = currentZipFile.createOutputStream();
+//            zip_builder->writeToStream(*stream.get(), nullptr);
             return;
+            
+            
+            
             
             for (auto& workFile : workFiles)
             {
