@@ -226,33 +226,63 @@ public:
             auto currentZipName         = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
             auto currentZipFile         = destFolder.getChildFile(currentZipName);
             auto workFiles              = juce::Array<juce::File>{};
-            auto allowedFileTypes       = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
+            auto allowedExtensions       = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
             auto currentZipEntryFiles   = juce::Array<juce::File>{};
             workFolder.findChildFiles(workFiles, juce::File::findFilesAndDirectories, true);
             workFiles.sort();
             
-            auto rootFolder             = workFolder.getParentDirectory();
-            auto sub_folders = rootFolder.findChildFiles(File::TypesOfFileToFind::findDirectories, true);
-            
-            auto zip_builder = juce::ZipFile::Builder{};
-            for(int sub_index = 0; sub_index < sub_folders.size(); ++sub_index){
-                auto preset_files = sub_folders[sub_index].findChildFiles(File::TypesOfFileToFind::findFiles, false);
-
-                for(int preset_index = 0; preset_index < preset_files.size(); ++preset_index){
-                    auto compressionLevel = preset_files[preset_index].getFileExtension().equalsIgnoreCase(".flac") ? 0 : 5;
-                    zip_builder.addFile(preset_files[preset_index], compressionLevel, preset_files[preset_index].getRelativePathFrom(rootFolder));
-                }
-            }
+            auto rootFolder  = workFolder.getParentDirectory();
+            auto sub_folders = workFolder.findChildFiles(File::TypesOfFileToFind::findDirectories, true);
+            workFiles = workFolder.findChildFiles(File::TypesOfFileToFind::findFiles, true);
             
             if (currentZipFile.existsAsFile())
                 currentZipFile.deleteFile();
+            
+            auto zip_builder = juce::ZipFile::Builder{};
+            
+            
+            
+            for (const auto& file : workFiles)
+            {
+                if (!allowedExtensions.contains(workFile.getFileExtension()))
+                    continue;
+                auto compressionLevel = file.getFileExtension().equalsIgnoreCase(".flac") ? 0 : 5;
+                zip_builder.addFile(file, compressionLevel, file.getRelativePathFrom(rootFolder));
+            }
+            
             auto stream     = currentZipFile.createOutputStream();
+            zip_builder .writeToStream(*stream.get(), nullptr);
+            return;
+            
+            
+            
+            
+            
+            for (const auto& subfolder : sub_folders)
+            {
+#if JUCE_MAC
+                if (!subfolder.getFullPathName().convertToPrecomposedUnicode().contains(
+                    workFolder.getFullPathName().convertToPrecomposedUnicode()))
+                    continue; // ignore sibling works
+#else
+                if (subfolder != workFolder && !subfolder.isAChildOf(workFolder))
+                    continue; // ignore sibling works
+#endif
+                const auto& files = subfolder.findChildFiles(File::TypesOfFileToFind::findFiles, false);
+                for (const auto& file : files)
+                {
+                    auto compressionLevel = file.getFileExtension().equalsIgnoreCase(".flac") ? 0 : 5;
+                    zip_builder.addFile(file, compressionLevel, file.getRelativePathFrom(rootFolder));
+                }
+            }
+            
+            //auto stream     = currentZipFile.createOutputStream();
             zip_builder .writeToStream(*stream.get(), nullptr);
             return;
             
             for (auto& workFile : workFiles)
             {
-                if (workFile.isDirectory() || !allowedFileTypes.contains(workFile.getFileExtension()))
+                if (workFile.isDirectory() || !allowedExtensions.contains(workFile.getFileExtension()))
                     continue;
                     
                 auto fileSize = workFile.getSize();
