@@ -211,30 +211,26 @@ public:
         
         createZIPsButton.onClick = [this] {
             auto workFolder = editFile.getParentDirectory();
-            auto destFolder = workFolder.getParentDirectory();
             auto workID = edit->state.getChildWithName("SY_EDIT").getProperty("workID").toString();
             if (workID.isEmpty())
             {
                 juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", "<SY_EDIT workID='...'> is missing");
                 return;
             }
-            
+            auto destFolderName         = workID + " - " + workFolder.getFileName();
+            auto destFolder             = workFolder.getParentDirectory().getChildFile("ZIPs").getChildFile(destFolderName);
             auto currentZipSize         = 0;
             auto maxZipSize             = 250000000; // keep our zips small for old mobile devices
             auto currentZipNumber       = 1;
-            auto currentZipNamePrefix   = workID + " - " + workFolder.getFileName() + " DL";
-            auto currentZipName         = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
+            auto currentZipName         = destFolderName + " - DL" + juce::String(currentZipNumber) + ".zip";
             auto currentZipFile         = destFolder.getChildFile(currentZipName);
-            auto workFiles              = juce::Array<juce::File>{};
-            auto allowedExtensions       = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
-            auto currentZipEntryFiles   = juce::Array<juce::File>{};
-            workFolder.findChildFiles(workFiles, juce::File::findFilesAndDirectories, true);
-            workFiles.sort();
+            auto allowedExtensions      = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
             
-            auto rootFolder  = workFolder.getParentDirectory();
-            auto sub_folders = workFolder.findChildFiles(File::TypesOfFileToFind::findDirectories, true);
-            workFiles = workFolder.findChildFiles(File::TypesOfFileToFind::findFiles, true);
+            auto rootFolder = workFolder.getParentDirectory();
+            auto workFiles  = workFolder.findChildFiles(File::TypesOfFileToFind::findFiles, true);
             workFiles.sort();
+            destFolder.deleteRecursively();
+            destFolder.createDirectory();
             
             if (currentZipFile.existsAsFile())
                 currentZipFile.deleteFile();
@@ -266,51 +262,9 @@ public:
                     
                     // next files will be in a new zip
                     currentZipNumber ++;
-                    currentZipName = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
+                    currentZipName = destFolderName + " - DL" + juce::String(currentZipNumber) + ".zip";
                     currentZipFile = destFolder.getChildFile(currentZipName);
                     currentZipSize = 0;
-                    currentZipEntryFiles.clear();
-                }
-            }
-            
-//            auto stream     = currentZipFile.createOutputStream();
-//            zip_builder->writeToStream(*stream.get(), nullptr);
-            return;
-            
-            
-            
-            
-            for (auto& workFile : workFiles)
-            {
-                if (workFile.isDirectory() || !allowedExtensions.contains(workFile.getFileExtension()))
-                    continue;
-                    
-                auto fileSize = workFile.getSize();
-                currentZipSize += fileSize;
-                currentZipEntryFiles.add(workFile);
-                
-                if (currentZipSize > maxZipSize || workFile == workFiles.getLast())
-                {
-                    // Zip current zip
-                    if (currentZipFile.existsAsFile())
-                        currentZipFile.deleteFile();
-                    auto stream     = currentZipFile.createOutputStream();
-                    auto zipBuilder = juce::ZipFile::Builder{};
-                    for (auto& zipEntryFile : currentZipEntryFiles)
-                    {
-                        // don't compress FLAC files: makes the unzip faster.
-                        auto compressionLevel = zipEntryFile.getFileExtension().equalsIgnoreCase("flac") ? 0 : 5;
-                        auto relativePath = zipEntryFile.getParentDirectory().getRelativePathFrom(workFolder);
-                        zipBuilder.addFile(zipEntryFile, compressionLevel);
-                    }
-                    zipBuilder.writeToStream(*stream.get(), nullptr);
-                    
-                    // next files will be in a new zip
-                    currentZipNumber ++;
-                    currentZipName = currentZipNamePrefix + juce::String(currentZipNumber) + ".zip";
-                    currentZipFile = destFolder.getChildFile(currentZipName);
-                    currentZipSize = 0;
-                    currentZipEntryFiles.clear();
                 }
             }
         };
