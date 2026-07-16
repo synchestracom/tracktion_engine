@@ -210,6 +210,7 @@ public:
         };
         
         createZIPsButton.onClick = [this] {
+
             auto workFolder = editFile.getParentDirectory();
             auto workID = edit->state.getChildWithName("SY_EDIT").getProperty("workID").toString();
             if (workID.isEmpty())
@@ -217,28 +218,25 @@ public:
                 juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", "<SY_EDIT workID='...'> is missing");
                 return;
             }
-            auto destFolderName         = workFolder.getFileName(); // make it short to avoid zip failure, will be renamed later
-            auto destFolder             = workFolder.getParentDirectory().getChildFile("ZIPs").getChildFile(destFolderName);
+
+			auto zipsFolder             = workFolder.getParentDirectory().getChildFile("ZIPs"); 
+            auto destFolderShort        = zipsFolder.getChildFile(                 workFolder.getFileName()); // short to avoid crash
+            auto destFolderLong         = zipsFolder.getChildFile(workID + " - " + workFolder.getFileName()); // long name for Dropbox
+
+            destFolderShort.deleteRecursively();
+            destFolderShort.createDirectory();
+
             auto currentZipSize         = juce::uint64{ 0 };
             auto maxZipSize             = 250000000; // keep our zips small for old mobile devices
             auto currentZipNumber       = 1;
-            auto currentZipName         = "DL" + juce::String(currentZipNumber) + ".zip";
-            auto currentZipFile         = destFolder.getChildFile(currentZipName);
-            auto allowedExtensions      = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
-            
-            auto rootFolder = workFolder.getParentDirectory();
-            auto workFiles  = workFolder.findChildFiles(File::TypesOfFileToFind::findFiles, true);
+            auto currentZipName         = "- DL" + juce::String(currentZipNumber) + ".zip";
+            auto currentZipFile         = destFolderShort.getChildFile(currentZipName);
+            auto allowedExtensions      = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt", ".pdf"};
+            auto rootFolder             = workFolder.getParentDirectory();
+            auto zip_builder            = std::make_unique<juce::ZipFile::Builder>();
+            auto workFiles              = workFolder.findChildFiles(File::TypesOfFileToFind::findFiles, true);
+
             workFiles.sort();
-            destFolder.deleteRecursively();
-            destFolder.createDirectory();
-            
-            if (currentZipFile.existsAsFile())
-                currentZipFile.deleteFile();
-            
-            auto zip_builder = std::make_unique<juce::ZipFile::Builder>();
-            
-            
-            
             for (const auto& file : workFiles)
             {
                 if (!allowedExtensions.contains(file.getFileExtension()))
@@ -253,25 +251,21 @@ public:
                 {
                     // Zip current zip
                     
-//                    if (currentZipFile.existsAsFile())
-//                        currentZipFile.deleteFile();
-                    
                     auto stream     = currentZipFile.createOutputStream();
                     zip_builder->writeToStream(*stream.get(), nullptr);
                     zip_builder.reset(new juce::ZipFile::Builder());
                     
                     // next files will be in a new zip
                     currentZipNumber ++;
-                    currentZipName = "DL" + juce::String(currentZipNumber) + ".zip";
-                    currentZipFile = destFolder.getChildFile(currentZipName);
+                    currentZipName = "- DL" + juce::String(currentZipNumber) + ".zip";
+                    currentZipFile = destFolderShort.getChildFile(currentZipName);
                     currentZipSize = 0;
                 }
             }
 
             // rename folder so it's easy to drop in Dropbox
-            auto destFolderName_long  = workID + " - " + workFolder.getFileName();
-            destFolder.moveFileTo(destFolder.getSiblingFile(destFolderName_long));
-
+            destFolderLong.deleteRecursively();
+            destFolderShort.moveFileTo(destFolderLong);
         };
         
         reloadButton.onClick = [this] {
