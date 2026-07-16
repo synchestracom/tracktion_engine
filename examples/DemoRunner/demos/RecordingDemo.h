@@ -217,12 +217,12 @@ public:
                 juce::AlertWindow::showMessageBoxAsync (juce::AlertWindow::WarningIcon, "", "<SY_EDIT workID='...'> is missing");
                 return;
             }
-            auto destFolderName         = workID + " - " + workFolder.getFileName();
+            auto destFolderName         = workFolder.getFileName(); // make it short to avoid zip failure, will be renamed later
             auto destFolder             = workFolder.getParentDirectory().getChildFile("ZIPs").getChildFile(destFolderName);
-            auto currentZipSize         = 0;
+            auto currentZipSize         = juce::uint64{ 0 };
             auto maxZipSize             = 250000000; // keep our zips small for old mobile devices
             auto currentZipNumber       = 1;
-            auto currentZipName         = destFolderName + " - DL" + juce::String(currentZipNumber) + ".zip";
+            auto currentZipName         = "DL" + juce::String(currentZipNumber) + ".zip";
             auto currentZipFile         = destFolder.getChildFile(currentZipName);
             auto allowedExtensions      = juce::StringArray {".tracktion", ".tracktionedit", ".flac", ".sy", ".txt"};
             
@@ -262,11 +262,16 @@ public:
                     
                     // next files will be in a new zip
                     currentZipNumber ++;
-                    currentZipName = destFolderName + " - DL" + juce::String(currentZipNumber) + ".zip";
+                    currentZipName = "DL" + juce::String(currentZipNumber) + ".zip";
                     currentZipFile = destFolder.getChildFile(currentZipName);
                     currentZipSize = 0;
                 }
             }
+
+            // rename folder so it's easy to drop in Dropbox
+            auto destFolderName_long  = workID + " - " + workFolder.getFileName();
+            destFolder.moveFileTo(destFolder.getSiblingFile(destFolderName_long));
+
         };
         
         reloadButton.onClick = [this] {
