@@ -228,7 +228,7 @@ public:
             destFolderShort.deleteRecursively();
             destFolderShort.createDirectory();
 
-            auto currentZipSize         = juce::uint64{ 0 };
+            auto currentZipSize         = juce::int64{ 0 };
             auto maxZipSize             = 250000000; // keep our zips small for old mobile devices
             auto currentZipNumber       = 1;
             auto currentZipName         = "- DL" + juce::String(currentZipNumber) + ".zip";
