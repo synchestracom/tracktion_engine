@@ -135,6 +135,8 @@ public:
                                                                 "Invalid family for: \n" + file.getFileName());
                         return;
                     }
+                    if (fileName.contains("Metronome"))
+                        family = families.find("ME");
                     
                     // TODO assert that all flac files have same length as midi file for this movement
                     
@@ -364,15 +366,17 @@ private:
     std::map<String, String> families = {
         {"WW", "Woodwinds"},
         {"BR", "Brass"},
-        {"ST", "Strings"},
-        {"S2", "Strings 2"},
-        {"KB", "Keyboards"},
-        {"PL", "Plucked"},
         {"PC", "Percussion"},
         {"FR", "Fretted"},
+        {"PL", "Plucked"},
+        {"KB", "Keyboards"},
         {"EL", "Electronic"},
+        {"VO", "Vocals"},
         {"CH", "Choir"},
-        {"VO", "Vocals"}};
+        {"ST", "Strings"},
+        {"S2", "Strings 2"},
+        {"ME", "Metronome"},
+    };
     
     juce::String defaultPosition {juce::CharPointer_UTF8 ("Sitting: 090\xc2\xb0.4m ")};
 
