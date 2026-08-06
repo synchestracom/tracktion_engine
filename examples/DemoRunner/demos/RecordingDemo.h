@@ -107,6 +107,7 @@ public:
                     
                     if (fileName.substring(0,   4) != "Mvt-"  ||
                         fileName.substring(10, 14) != "bpm-"  ||
+                        partName.isEmpty() ||
                         !juce::Range(1, 100).contains(movement)||
                         !juce::Range(10, 361).contains(bpm)   ||
                         !juce::Range(01, 100).contains(partOrder.getIntValue()))
