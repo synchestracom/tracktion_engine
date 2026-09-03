@@ -54,6 +54,7 @@ public:
 private:
     double currentLevel = 0.0;
     float lastSamp = 0.0f;
+    bool isPreviewBarsPlugin = false;
 
     void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override;
 
