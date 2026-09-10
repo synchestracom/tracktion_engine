@@ -173,6 +173,9 @@ public:
                                                 : parentTrack->getSubTrackList()->objects.getLast();
                         clipTrack = edit->insertNewAudioTrack(TrackInsertPoint(parentTrack, lastSiblingTrack), nullptr).get();
                         clipTrack->setName(defaultPosition + partName);
+                        for (auto& plugin : clipTrack->getAllPlugins())
+                            if (auto volumePlugin = dynamic_cast<tracktion::VolumeAndPanPlugin*> (plugin))
+                                volumePlugin->ignoreVca = true;
                     }
                     
                     // TODO assert all FLACs with same bpm have exactly the same length
@@ -200,7 +203,8 @@ public:
                     
                     clip->setUsesProxy(false);
                     clip->setAutoTempo(true);
-                    clip->setAutoPitch(true);
+                    clip->setAutoPitch(!fileName.contains("-PCU-") && // Percussion unpitched
+                                       !fileName.contains("-MET-"));  // Metronome
                     clip->setMuted(false);
                     clip->setLength(clip->getMaximumLength(), true);
                     
